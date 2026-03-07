@@ -18,14 +18,21 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-
-    useEffect(() => {
+    const [user, setUser] = useState<User | null>(() => {
+        const savedToken = localStorage.getItem('token');
         const savedRole = localStorage.getItem('role');
         const savedEmail = localStorage.getItem('email');
-        if (token && savedRole && savedEmail) {
-            setUser({ id: '', email: savedEmail, role: savedRole as 'USER' | 'ADMIN' });
+        if (savedToken && savedRole && savedEmail) {
+            return { id: '', email: savedEmail, role: savedRole as 'USER' | 'ADMIN' };
+        }
+        return null;
+    });
+
+    // Handle token changes (logout/login)
+    useEffect(() => {
+        if (!token) {
+            setUser(null);
         }
     }, [token]);
 

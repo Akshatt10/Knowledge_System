@@ -59,7 +59,7 @@ const KnowledgeBase: React.FC = () => {
             let completed = 0;
             for (const file of fileList) {
                 setBatchCurrent(completed + 1);
-                setCurrentFileName(file.filename);
+                setCurrentFileName(file.name);
                 setUploadProgress(10);
 
                 // Simulate progress for current file
@@ -143,10 +143,10 @@ const KnowledgeBase: React.FC = () => {
                                 <CloudUpload size={48} color="var(--text-secondary)" style={{ marginBottom: '16px' }} />
                                 <h4 style={{ marginBottom: '8px' }}>Drag & Drop Files</h4>
                                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                                    Supports multiple PDF, TXT, DOCX files
+                                    Supports multiple PDF, TXT, DOCX, JSON files
                                 </p>
                                 <input
-                                    type="file" ref={fileInputRef} hidden accept=".pdf,.txt,.docx" multiple
+                                    type="file" ref={fileInputRef} hidden accept=".pdf,.txt,.docx,.json" multiple
                                     onChange={(e) => e.target.files && handleFileUploads(e.target.files)}
                                 />
                             </div>

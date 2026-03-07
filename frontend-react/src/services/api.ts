@@ -18,6 +18,20 @@ api.interceptors.request.use((config) => {
     return config;
 });
 
+// Response Interceptor for 401
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            localStorage.removeItem('token');
+            localStorage.removeItem('role');
+            localStorage.removeItem('email');
+            window.location.href = '/login';
+        }
+        return Promise.reject(error);
+    }
+);
+
 // Auth Services
 export const authService = {
     login: (formData: FormData) => api.post('/auth/login', formData, {
@@ -37,7 +51,7 @@ export const documentService = {
 
 // Query Services
 export const queryService = {
-    ask: (data: { question: string; provider: string; chat_history?: any[] }) =>
+    ask: (data: { question: string; chat_history?: any[] }) =>
         api.post('/query', data),
 };
 

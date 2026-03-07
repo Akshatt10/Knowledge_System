@@ -53,7 +53,6 @@ class QueryRequest(BaseModel):
     """User question submitted to the RAG engine."""
 
     question: str = Field(..., min_length=1, max_length=2000)
-    provider: str = Field(default="openai", description="The LLM provider to use (openai or gemini).")
     chat_history: list[dict[str, str]] | None = Field(
         default=None,
         description="Optional list of previous exchanges: [{role, content}, ...]",

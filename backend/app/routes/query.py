@@ -25,8 +25,7 @@ async def ask_question(
         result = rag_service.answer_query(
             question=payload.question,
             user_id=str(current_user.id),
-            chat_history=payload.chat_history,
-            provider=payload.provider
+            chat_history=payload.chat_history
         )
     except Exception as exc:
         logger.exception("RAG query failed")

@@ -24,7 +24,7 @@ from app.utils.extractors import SUPPORTED_EXTENSIONS
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Documents"])
 
-ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx"}
+ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx", ".json"}
 
 
 from typing import List

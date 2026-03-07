@@ -32,7 +32,7 @@ const AdminStats: React.FC = () => {
                 adminService.checkHealth()
             ]);
             setStats(statsRes.data);
-            setHealth(healthRes.data.status === 'ok' ? 'healthy' : 'error');
+            setHealth(healthRes.data.status === 'healthy' ? 'healthy' : 'error');
         } catch (err) {
             setHealth('error');
         } finally {

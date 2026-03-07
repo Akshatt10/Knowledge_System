@@ -16,13 +16,18 @@ interface Message {
 }
 
 const Chat: React.FC = () => {
-    const [messages, setMessages] = useState<Message[]>([
-        { role: 'ai', content: "Hello! I am your advanced RAG Intelligence Agent. I can analyze documents from our secure knowledge base. What would you like to know?" }
-    ]);
+    const [messages, setMessages] = useState<Message[]>(() => {
+        const saved = sessionStorage.getItem('chat_messages');
+        return saved ? JSON.parse(saved) : [
+            { role: 'ai', content: "Hello! I am your advanced RAG Intelligence Agent. I can analyze documents from our secure knowledge base. What would you like to know?" }
+        ];
+    });
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
-    const [provider, setProvider] = useState<'openai' | 'gemini'>('openai');
-    const [history, setHistory] = useState<any[]>([]);
+    const [history, setHistory] = useState<any[]>(() => {
+        const saved = sessionStorage.getItem('chat_history');
+        return saved ? JSON.parse(saved) : [];
+    });
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -31,6 +36,11 @@ const Chat: React.FC = () => {
     };
 
     useEffect(scrollToBottom, [messages]);
+
+    useEffect(() => {
+        sessionStorage.setItem('chat_messages', JSON.stringify(messages));
+        sessionStorage.setItem('chat_history', JSON.stringify(history));
+    }, [messages, history]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,7 +54,6 @@ const Chat: React.FC = () => {
         try {
             const res = await queryService.ask({
                 question,
-                provider,
                 chat_history: history
             });
 
@@ -83,22 +92,9 @@ const Chat: React.FC = () => {
                         <h3 style={{ fontSize: '1.2rem', fontWeight: '600' }}>AI Research Assistant</h3>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,0,0,0.3)', padding: '4px 12px', borderRadius: '20px' }}>
-                        <span style={{ fontSize: '0.8rem', color: provider === 'gemini' ? 'var(--accent-glow)' : 'var(--text-secondary)', fontWeight: '600' }}>Gemini</span>
-                        <div
-                            onClick={() => setProvider(p => p === 'openai' ? 'gemini' : 'openai')}
-                            style={{
-                                width: '40px', height: '20px', background: provider === 'openai' ? 'var(--accent-glow)' : '#ff007f',
-                                borderRadius: '10px', position: 'relative', cursor: 'pointer', transition: '0.3s'
-                            }}
-                        >
-                            <motion.div
-                                animate={{ x: provider === 'openai' ? 22 : 2 }}
-                                transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px' }}
-                            />
-                        </div>
-                        <span style={{ fontSize: '0.8rem', color: provider === 'openai' ? 'var(--accent-glow)' : 'var(--text-secondary)', fontWeight: '600' }}>OpenAI</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.3)', padding: '6px 14px', borderRadius: '20px', border: '1px solid var(--panel-border)' }}>
+                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-glow)', boxShadow: '0 0 8px var(--accent-glow)' }}></div>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600', letterSpacing: '0.05em' }}>GEMINI POWERED</span>
                     </div>
                 </div>
 

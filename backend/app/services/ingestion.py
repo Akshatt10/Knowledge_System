@@ -39,7 +39,8 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str, user_i
     loader_map = {
         "pdf": PyPDFLoader,
         "txt": TextLoader,
-        "docx": Docx2txtLoader
+        "docx": Docx2txtLoader,
+        "json": TextLoader
     }
     
     loader_class = loader_map.get(file_type.lower())
@@ -57,8 +58,15 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str, user_i
         chunk_size=settings.CHUNK_SIZE,
         chunk_overlap=settings.CHUNK_OVERLAP,
     )
-    chunks = splitter.split_documents(raw_docs)
-    logger.info("Split '%s' into %d chunks", filename, len(chunks))
+    temp_chunks = splitter.split_documents(raw_docs)
+    
+    # Prepend filename to improve retrieval precision for specific files
+    chunks = []
+    for chunk in temp_chunks:
+        chunk.page_content = f"[Source: {filename}]\n{chunk.page_content}"
+        chunks.append(chunk)
+
+    logger.info("Processed '%s' into %d injected chunks", filename, len(chunks))
 
     # 4. Add Metadata
     for i, chunk in enumerate(chunks):

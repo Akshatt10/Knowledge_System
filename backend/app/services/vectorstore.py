@@ -27,13 +27,24 @@ class VectorStoreService:
             persist_directory=str(settings.CHROMA_PERSIST_DIR)
         )
 
-    def get_retriever(self, user_id: str | None = None, k: int | None = None):
-        """Returns the LangChain retriever interface with optional user filtering."""
-        top_k = k or settings.TOP_K_RESULTS
-        search_kwargs = {"k": top_k}
-        if user_id:
-            search_kwargs["filter"] = {"user_id": user_id}
-        return self.vectorstore.as_retriever(search_kwargs=search_kwargs)
+    def get_retriever(
+        self,
+        user_id: str,
+        search_type: str = "similarity",
+        search_kwargs: dict | None = None,
+    ):
+        """Return a retriever scoped to a specific user."""
+
+        if search_kwargs is None:
+            search_kwargs = {"k": 5}
+
+        return self.vectorstore.as_retriever(
+            search_type=search_type,
+            search_kwargs={
+                **search_kwargs,
+                "filter": {"user_id": user_id}
+            },
+        )
 
     def add_documents(self, documents: list) -> int:
         """Add LangChain Document objects to ChromaDB. Returns count."""

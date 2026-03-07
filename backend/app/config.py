@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
+        extra="ignore",
     )
 
     # ─────────────────────────────────────
@@ -24,16 +25,15 @@ class Settings(BaseSettings):
     # ─────────────────────────────────────
     # LLM Configuration
     # ─────────────────────────────────────
-    OPENAI_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
-    LLM_MODEL: str = "gpt-3.5-turbo"
+    LLM_MODEL: str = "gemini-2.5-flash"
 
     # ─────────────────────────────────────
     # Embeddings / RAG
     # ─────────────────────────────────────
     EMBEDDING_MODEL: str = "all-MiniLM-L6-v2"
-    CHUNK_SIZE: int = 1000
-    CHUNK_OVERLAP: int = 200
+    CHUNK_SIZE: int = 500
+    CHUNK_OVERLAP: int = 150
     TOP_K_RESULTS: int = 5
 
     # ─────────────────────────────────────
