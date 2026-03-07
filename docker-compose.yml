@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL (Database) ─────────────────────────────────────────
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: kis-postgres
+    restart: always
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-projectgenai}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sekret_password}
+      POSTGRES_DB: ${POSTGRES_DB:-projectgenai}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-projectgenai} -d ${POSTGRES_DB:-projectgenai}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Adminer (DB Management UI) ────────────────────────────────────
+  adminer:
+    image: adminer
+    container_name: kis-adminer
+    restart: always
+    ports:
+      - "8091:8080"
+    depends_on:
+      - postgres_db
+
+  # ── MinIO (S3-Compatible Local Storage) ───────────────────────────
+  minio:
+    image: minio/minio
+    container_name: kis-minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+volumes:
+  chroma_data:
+    driver: local
+  uploads:
+    driver: local
+  postgres_data:
+    driver: local
+  minio_data:
+    driver: local

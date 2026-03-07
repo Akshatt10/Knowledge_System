@@ -1,0 +1,22 @@
+# .gitignore for Knowledge Intelligence System
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.env
+
+# ChromaDB & Uploads
+chroma_data/
+uploads/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
