@@ -27,10 +27,13 @@ class VectorStoreService:
             persist_directory=str(settings.CHROMA_PERSIST_DIR)
         )
 
-    def get_retriever(self, k: int | None = None):
-        """Returns the LangChain retriever interface."""
+    def get_retriever(self, user_id: str | None = None, k: int | None = None):
+        """Returns the LangChain retriever interface with optional user filtering."""
         top_k = k or settings.TOP_K_RESULTS
-        return self.vectorstore.as_retriever(search_kwargs={"k": top_k})
+        search_kwargs = {"k": top_k}
+        if user_id:
+            search_kwargs["filter"] = {"user_id": user_id}
+        return self.vectorstore.as_retriever(search_kwargs=search_kwargs)
 
     def add_documents(self, documents: list) -> int:
         """Add LangChain Document objects to ChromaDB. Returns count."""
@@ -38,9 +41,11 @@ class VectorStoreService:
         logger.info("Upserted %d docs into ChromaDB", len(ids))
         return len(ids)
 
-    def list_documents(self) -> list[dict[str, Any]]:
-        """Return unique document metadata (de-duplicated from chunks)."""
-        all_meta = self.vectorstore.get(include=["metadatas"])
+    def list_documents(self, user_id: str | None = None) -> list[dict[str, Any]]:
+        """Return unique document metadata (de-duplicated from chunks) for a user."""
+        filter_query = {"user_id": user_id} if user_id else None
+        all_meta = self.vectorstore.get(where=filter_query, include=["metadatas"])
+        
         seen: dict[str, dict[str, Any]] = {}
         for meta in (all_meta.get("metadatas") or []):
             if meta is None:
@@ -53,9 +58,13 @@ class VectorStoreService:
                 seen[doc_id]["chunk_count"] = seen[doc_id].get("chunk_count", 0) + 1
         return list(seen.values())
 
-    def delete_document(self, doc_id: str) -> bool:
-        """Remove all chunks belonging to *doc_id*."""
-        existing = self.vectorstore.get(where={"document_id": doc_id})
+    def delete_document(self, doc_id: str, user_id: str | None = None) -> bool:
+        """Remove all chunks belonging to *doc_id* (and verified by user_id)."""
+        filter_query = {"document_id": doc_id}
+        if user_id:
+            filter_query["user_id"] = user_id
+            
+        existing = self.vectorstore.get(where=filter_query)
         ids_to_delete = existing.get("ids", [])
         if not ids_to_delete:
             return False

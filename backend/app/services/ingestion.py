@@ -18,22 +18,22 @@ from app.services.s3 import s3_service
 logger = logging.getLogger(__name__)
 
 
-def ingest_document(file_path: str | Path, filename: str, file_type: str) -> dict:
+def ingest_document(file_path: str | Path, filename: str, file_type: str, user_id: str) -> dict:
     """
-    LangChain ingestion pipeline + S3 upload.
+    LangChain ingestion pipeline + S3 upload with user isolation.
 
     1. Upload the raw file to MinIO/S3.
     2. Load text using LangChain Loaders.
     3. Split text using RecursiveCharacterTextSplitter.
-    4. Store in ChromaDB vectorstore.
+    4. Store in ChromaDB vectorstore with user_id metadata.
     """
     doc_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
     
     # 1. Upload to S3
-    object_name = f"{doc_id}_{filename}"
+    object_name = f"{user_id}/{doc_id}_{filename}"
     s3_uri = s3_service.upload_file(str(file_path), object_name)
-    logger.info("Uploaded %s to S3 at %s", filename, s3_uri)
+    logger.info("Uploaded %s to S3 at %s for user %s", filename, s3_uri, user_id)
 
     # 2. Extract using LangChain Loaders
     loader_map = {
@@ -63,6 +63,7 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str) -> dic
     # 4. Add Metadata
     for i, chunk in enumerate(chunks):
         chunk.metadata.update({
+            "user_id": user_id,
             "document_id": doc_id,
             "filename": filename,
             "file_type": file_type,
@@ -74,12 +75,10 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str) -> dic
     # 5. Embed + store in Chroma
     chunk_count = vector_store.add_documents(chunks)
 
-    # Note: We keep the file in settings.UPLOAD_DIR locally as well for fallback,
-    # or we can delete it since it's on S3. For now we leave it per original logic.
-
     return {
         "document_id": doc_id,
         "filename": filename,
         "chunk_count": chunk_count,
-        "s3_uri": s3_uri
+        "s3_uri": s3_uri,
+        "user_id": user_id
     }

@@ -9,13 +9,17 @@ from pydantic import BaseModel, Field
 # ── Document Endpoints ─────────────────────────────────────────────────
 
 
-class UploadResponse(BaseModel):
-    """Returned after a successful document upload + ingestion."""
-
+class UploadResult(BaseModel):
+    """Result for a single file in a bulk upload."""
     document_id: str
     filename: str
     chunk_count: int
-    message: str = "Document ingested successfully"
+
+class UploadResponse(BaseModel):
+    """Returned after a successful bulk document upload + ingestion."""
+    results: list[UploadResult]
+    message: str = "Documents ingested successfully"
+    total_files: int
 
 
 class DocumentInfo(BaseModel):
@@ -79,8 +83,21 @@ class StatsResponse(BaseModel):
 
     total_documents: int
     total_chunks: int
+    total_users: int
     collection_name: str
 
+
+class UserOut(BaseModel):
+    """Safe user data for administrative listing."""
+    id: str
+    email: str
+    role: str
+    is_active: bool = True
+
+class UserUpdate(BaseModel):
+    """Payload for updating user roles or status."""
+    role: str | None = None
+    is_active: bool | None = None
 
 class HealthResponse(BaseModel):
     """Health check payload."""

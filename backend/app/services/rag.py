@@ -67,13 +67,15 @@ class RAGService:
     def answer_query(
         self,
         question: str,
+        user_id: str,
         chat_history: list[dict[str, str]] | None = None,
         provider: str = "openai",
     ) -> dict:
-        """Uses LangChain's create_retrieval_chain to answer questions."""
+        """Uses LangChain's create_retrieval_chain to answer questions with user isolation."""
 
         llm = self._get_llm(provider)
-        retriever = vector_store.get_retriever()
+        # Filter retrieval by user_id
+        retriever = vector_store.get_retriever(user_id=user_id)
 
         prompt = ChatPromptTemplate.from_messages([
             ("system", SYSTEM_PROMPT),
@@ -83,7 +85,7 @@ class RAGService:
         document_chain = create_stuff_documents_chain(llm, prompt)
         retrieval_chain = create_retrieval_chain(retriever, document_chain)
 
-        logger.info("Executing LangChain RAG with provider %s", provider)
+        logger.info("Executing LangChain RAG for user %s with provider %s", user_id, provider)
         response = retrieval_chain.invoke({"input": question})
 
         answer_text = response["answer"]

@@ -24,6 +24,7 @@ async def ask_question(
     try:
         result = rag_service.answer_query(
             question=payload.question,
+            user_id=str(current_user.id),
             chat_history=payload.chat_history,
             provider=payload.provider
         )
