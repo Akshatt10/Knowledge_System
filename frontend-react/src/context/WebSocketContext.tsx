@@ -49,7 +49,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         // Connect to Vite's proxy if local, otherwise to real API url
         const baseUrl = import.meta.env.VITE_API_URL
-            ? import.meta.env.VITE_API_URL.replace('http', 'ws')
+            ? import.meta.env.VITE_API_URL.replace('http', 'ws').replace(/\/api$/, '')
             : `${protocol}//${window.location.host}`;
 
         // Need to bypass Vite proxy for pure WS if running frontend specifically on different port, 
