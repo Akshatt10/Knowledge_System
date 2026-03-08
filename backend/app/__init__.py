@@ -19,7 +19,6 @@ async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     # Ensure required directories exist
     Path(settings.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-    Path(settings.CHROMA_PERSIST_DIR).mkdir(parents=True, exist_ok=True)
 
     # Eagerly initialise the vector store so the embedding model is loaded
     from app.services.vectorstore import vector_store  # noqa: F401

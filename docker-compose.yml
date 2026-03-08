@@ -52,11 +52,32 @@ services:
       timeout: 20s
       retries: 3
 
+  # ── Backend (FastAPI) ─────────────────────────────────────────────
+  backend:
+    build: ./backend
+    container_name: kis-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+
+  # ── Frontend (React/Vite) ─────────────────────────────────────────
+  frontend:
+    build: ./frontend-react
+    container_name: kis-frontend
+    restart: always
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
 volumes:
-  chroma_data:
-    driver: local
-  uploads:
-    driver: local
   postgres_data:
     driver: local
   minio_data:

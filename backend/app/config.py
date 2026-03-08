@@ -20,7 +20,6 @@ class Settings(BaseSettings):
     # ─────────────────────────────────────
     BASE_DIR: Path = Path(__file__).resolve().parent.parent
     UPLOAD_DIR: Path = Path("uploads")
-    CHROMA_PERSIST_DIR: Path = Path("chroma_data")
 
     # ─────────────────────────────────────
     # LLM Configuration
@@ -38,9 +37,10 @@ class Settings(BaseSettings):
     TOP_K_RESULTS: int = 5
 
     # ─────────────────────────────────────
-    # Chroma Vector Store
+    # Pinecone Vector Store
     # ─────────────────────────────────────
-    CHROMA_COLLECTION_NAME: str = "knowledge_base"
+    PINECONE_API_KEY: str = ""
+    PINECONE_INDEX_NAME: str = "knowledge-base"
 
     # ─────────────────────────────────────
     # PostgreSQL
