@@ -1,8 +1,9 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch>=2.4.0
 fastapi
 uvicorn[standard]
 python-multipart
 sqlalchemy
-psycopg2-binary
 psycopg[binary]
 alembic
 pydantic
@@ -10,7 +11,7 @@ pydantic-settings
 python-jose[cryptography]
 passlib[bcrypt]
 boto3
-pinecone-client
+pinecone
 langchain
 langchain-pinecone
 langchain-openai
