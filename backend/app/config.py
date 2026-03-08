@@ -4,6 +4,7 @@ Application configuration loaded from environment variables.
 
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
 
 
 class Settings(BaseSettings):
@@ -45,20 +46,29 @@ class Settings(BaseSettings):
     # ─────────────────────────────────────
     # PostgreSQL
     # ─────────────────────────────────────
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
+    POSTGRES_USER: str = "postgres"
+    POSTGRES_PASSWORD: str = "postgres"
+    POSTGRES_DB: str = "postgres"
     POSTGRES_HOST: str = "localhost"
     POSTGRES_PORT: int = 5432
+    DATABASE_URL: str | None = None
 
-    @property
-    def DATABASE_URL(self) -> str:
-        """Construct database URL from environment variables."""
-        return (
-            f"postgresql+psycopg://{self.POSTGRES_USER}:"
-            f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:"
-            f"{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-        )
+    @model_validator(mode="after")
+    def assemble_db_connection(self) -> "Settings":
+        """Construct database URL from environment variables if not explicitly provided."""
+        if getattr(self, "DATABASE_URL", None):
+            url = self.DATABASE_URL
+            if url.startswith("postgres://"):
+                self.DATABASE_URL = url.replace("postgres://", "postgresql+psycopg://", 1)
+            elif url.startswith("postgresql://"):
+                self.DATABASE_URL = url.replace("postgresql://", "postgresql+psycopg://", 1)
+        else:
+            self.DATABASE_URL = (
+                f"postgresql+psycopg://{self.POSTGRES_USER}:"
+                f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:"
+                f"{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+            )
+        return self
 
     # ─────────────────────────────────────
     # AWS / S3 / MinIO

@@ -40,6 +40,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('token', newToken);
         localStorage.setItem('role', role);
         localStorage.setItem('email', email);
+
+        // Clear any lingering session chat data from a previous user
+        sessionStorage.clear();
+
         setToken(newToken);
         setUser({ id: '', email, role: role as 'USER' | 'ADMIN' });
     };
@@ -48,6 +52,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('token');
         localStorage.removeItem('role');
         localStorage.removeItem('email');
+
+        // Ensure no chat history is left behind when logging out
+        sessionStorage.clear();
+
         setToken(null);
         setUser(null);
     };
