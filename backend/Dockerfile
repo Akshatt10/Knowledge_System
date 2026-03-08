@@ -27,8 +27,7 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy application code
 COPY . .
 
-# Create runtime directories
-RUN mkdir -p uploads chroma_data
+# No local directories needed (using S3 and Pinecone)
 
 # Expose port
 EXPOSE 8000
