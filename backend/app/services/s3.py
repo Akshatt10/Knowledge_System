@@ -8,14 +8,19 @@ logger = logging.getLogger(__name__)
 
 class S3Service:
     def __init__(self):
-        self.s3_client = boto3.client(
-            's3',
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            endpoint_url=settings.S3_ENDPOINT_URL,
-            region_name=settings.AWS_DEFAULT_REGION,
-            config=Config(s3={'addressing_style': 'path'})
-        )
+        client_kwargs = {
+            'aws_access_key_id': settings.AWS_ACCESS_KEY_ID,
+            'aws_secret_access_key': settings.AWS_SECRET_ACCESS_KEY,
+            'region_name': settings.AWS_DEFAULT_REGION,
+            'config': Config(s3={'addressing_style': 'path'})
+        }
+        
+        # Only inject endpoint_url if it's explicitly set (e.g. for MinIO)
+        # Boto3 natively figures out the AWS endpoint if this is None/omitted.
+        if settings.S3_ENDPOINT_URL:
+            client_kwargs['endpoint_url'] = settings.S3_ENDPOINT_URL
+
+        self.s3_client = boto3.client('s3', **client_kwargs)
         self.bucket = settings.S3_BUCKET_NAME
         self._ensure_bucket_exists()
 
