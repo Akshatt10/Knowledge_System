@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
-    Users,
     Shield,
     User,
     Trash2,
     RefreshCw,
     Search,
     Loader2,
-    AlertCircle,
-    MoreVertical
+    AlertCircle
 } from 'lucide-react';
 import { adminService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
