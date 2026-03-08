@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_experimental.text_splitter import SemanticChunker
 
 from app.config import settings
 from app.services.vectorstore import vector_store
@@ -53,11 +53,17 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str, user_i
     if not raw_docs:
         raise ValueError(f"No text could be extracted from '{filename}'.")
 
-    # 3. Chunk
-    splitter = RecursiveCharacterTextSplitter(
-        chunk_size=settings.CHUNK_SIZE,
-        chunk_overlap=settings.CHUNK_OVERLAP,
+    # 3. Semantic Chunking (Mathematical meaning boundary parsing)
+    # This splits documents into sentences, embeds each sentence, and cuts the chunk
+    # ONLY when the cosine similarity between two sentences drops (indicating a topic shift).
+    logger.info("Initializing SemanticChunker with HuggingFace embeddings...")
+    splitter = SemanticChunker(
+        vector_store.embeddings,
+        breakpoint_threshold_type="percentile",
+        breakpoint_threshold_amount=80 # 80th percentile difference triggers a break
     )
+    
+    # SemanticChunker uses the underlying raw text to calculate breaks
     temp_chunks = splitter.split_documents(raw_docs)
     
     # Prepend filename to improve retrieval precision for specific files

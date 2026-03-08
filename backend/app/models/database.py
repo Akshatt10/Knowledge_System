@@ -25,3 +25,38 @@ class Document(Base):
     file_type = Column(String(50))
     chunk_count = Column(String(10), default="0")
     uploaded_at = Column(DateTime, default=datetime.utcnow)
+
+class Room(Base):
+    __tablename__ = "rooms"
+
+    id = Column(String(36), primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    document_id = Column(String(36), index=True, nullable=True)  # The shared document
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class RoomMember(Base):
+    __tablename__ = "room_members"
+
+    id = Column(String(36), primary_key=True, index=True)
+    room_id = Column(String(36), index=True, nullable=False)
+    user_id = Column(String(36), index=True, nullable=False)
+    role = Column(String(20), default="MEMBER", nullable=False) # "OWNER" or "MEMBER"
+    joined_at = Column(DateTime, default=datetime.utcnow)
+
+class RoomDocument(Base):
+    __tablename__ = "room_documents"
+
+    id = Column(String(36), primary_key=True, index=True)
+    room_id = Column(String(36), index=True, nullable=False)
+    document_id = Column(String(36), index=True, nullable=False)
+    added_by = Column(String(36), index=True, nullable=False) # user_id of whoever shared it
+    added_at = Column(DateTime, default=datetime.utcnow)
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(String(36), primary_key=True, index=True)
+    room_id = Column(String(36), index=True, nullable=False)
+    sender_id = Column(String(36), index=True, nullable=True)  # NULL = AI response
+    content = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)

@@ -16,7 +16,9 @@ const Login: React.FC = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const from = (location.state as any)?.from?.pathname || '/chat';
+    const fromPath = (location.state as any)?.from?.pathname || '/chat';
+    const fromSearch = (location.state as any)?.from?.search || '';
+    const destination = `${fromPath}${fromSearch}`;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,7 +37,7 @@ const Login: React.FC = () => {
                 const res = await authService.register({ email, password });
                 setAuth(res.data.access_token, res.data.role, email);
             }
-            navigate(from, { replace: true });
+            navigate(destination, { replace: true });
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Authentication failed. Please check your credentials.');
         } finally {

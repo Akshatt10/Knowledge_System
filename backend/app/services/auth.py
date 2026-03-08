@@ -26,7 +26,11 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
 
 # Database Session Setup
-engine = create_engine(settings.DATABASE_URL)
+engine = create_engine(
+    settings.DATABASE_URL,
+    pool_pre_ping=True,  # Prevent OperationalErrors from Neon DB dropped connections
+    pool_recycle=300     # Refresh connections periodically
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

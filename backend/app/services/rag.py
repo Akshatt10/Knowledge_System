@@ -54,10 +54,13 @@ class RAGService:
                 openai_api_key=settings.OPENAI_API_KEY,
             )
 
-    def _get_llm(self, provider: str = "openai"):
+    def get_llm(self, provider: str = "openai"):
         if provider == "gemini":
             if not self.gemini_llm:
-                raise ValueError("Gemini API key not configured.")
+                if self.openai_llm:
+                    logger.warning("Gemini not configured, falling back to OpenAI")
+                    return self.openai_llm
+                raise ValueError("Gemini API key not configured (and no OpenAI fallback).")
             return self.gemini_llm
         
         # Default to OpenAI for production reliability
@@ -77,7 +80,7 @@ class RAGService:
     ) -> dict:
         """Execute RAG pipeline and return grounded answer."""
 
-        llm = self._get_llm(provider=provider)
+        llm = self.get_llm(provider=provider)
 
         # Better retriever with MMR for diverse but relevant chunks
         retriever = vector_store.get_retriever(

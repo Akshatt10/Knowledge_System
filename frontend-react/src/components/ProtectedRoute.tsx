@@ -12,8 +12,8 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
     const location = useLocation();
 
     if (!isAuthenticated) {
-        // Redirect to login but save the current location
-        return <Navigate to="/login" state={{ from: location }} replace />;
+        // Redirect to login but save the current location AND its search parameters (?room=xyz)
+        return <Navigate to="/login" state={{ from: { pathname: location.pathname, search: location.search } }} replace />;
     }
 
     if (adminOnly && !isAdmin) {

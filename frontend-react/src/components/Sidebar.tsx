@@ -8,12 +8,30 @@ import {
     LogOut,
     User,
     ShieldCheck,
-    Sparkles
+    Sparkles,
+    Hash
 } from 'lucide-react';
+import { roomService } from '../services/api';
 
 const Sidebar: React.FC = () => {
     const { user, logout, isAdmin } = useAuth();
     const navigate = useNavigate();
+    const [rooms, setRooms] = React.useState<any[]>([]);
+
+    React.useEffect(() => {
+        const fetchRooms = async () => {
+            try {
+                const res = await roomService.getUserRooms();
+                setRooms(res.data.rooms);
+            } catch (err) {
+                console.error("Failed to load user rooms", err);
+            }
+        };
+        fetchRooms();
+
+        window.addEventListener('rooms-updated', fetchRooms);
+        return () => window.removeEventListener('rooms-updated', fetchRooms);
+    }, []);
 
     const handleLogout = () => {
         logout();
@@ -56,6 +74,39 @@ const Sidebar: React.FC = () => {
                         {item.icon} <span>{item.label}</span>
                     </NavLink>
                 ))}
+
+                {/* SHARED SPACES SUBMENU */}
+                {rooms.length > 0 && (
+                    <div style={{ marginTop: '20px' }}>
+                        <div style={{
+                            fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)',
+                            textTransform: 'uppercase', letterSpacing: '1px',
+                            marginBottom: '8px', paddingLeft: '16px'
+                        }}>
+                            Shared Spaces
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            {rooms.map(room => (
+                                <NavLink
+                                    key={room.id}
+                                    to={`/chat?room=${room.id}`}
+                                    style={({ isActive }) => ({
+                                        display: 'flex', alignItems: 'center', gap: '10px',
+                                        padding: '8px 16px', borderRadius: 'var(--radius-sm)',
+                                        textDecoration: 'none', color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                        background: isActive ? 'rgba(0, 240, 255, 0.05)' : 'transparent',
+                                        fontSize: '0.85rem', fontWeight: '500', transition: 'var(--transition-smooth)'
+                                    })}
+                                >
+                                    <Hash size={14} color="var(--accent-glow)" />
+                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {room.name}
+                                    </span>
+                                </NavLink>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 {isAdmin && (
                     <>

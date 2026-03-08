@@ -6,9 +6,11 @@ import {
     Trash2,
     RefreshCw,
     Loader2,
-    AlertCircle
+    AlertCircle,
+    Users
 } from 'lucide-react';
-import { documentService } from '../services/api';
+import { documentService, roomService } from '../services/api';
+import { useNavigate } from 'react-router-dom';
 
 interface Document {
     document_id: string;
@@ -27,6 +29,7 @@ const KnowledgeBase: React.FC = () => {
     const [batchCurrent, setBatchCurrent] = useState(0);
     const [error, setError] = useState<string | null>(null);
 
+    const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const loadData = async () => {
@@ -38,6 +41,16 @@ const KnowledgeBase: React.FC = () => {
             console.error('Failed to load documents', err);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleCreateRoom = async (doc: Document) => {
+        try {
+            const res = await roomService.createRoom(doc.document_id, `${doc.filename} Room`);
+            navigate(`/chat?room=${res.data.room_id}`);
+        } catch (err) {
+            console.error("Failed to create room", err);
+            setError("Failed to create collaboration room. Try again.");
         }
     };
 
@@ -198,28 +211,62 @@ const KnowledgeBase: React.FC = () => {
                                         className="glass-panel"
                                         style={{
                                             background: 'rgba(0,0,0,0.2)', padding: '16px',
-                                            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+                                            display: 'flex', flexDirection: 'column', gap: '12px'
                                         }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            <div style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}>
-                                                <FileText size={20} color="var(--text-secondary)" />
-                                            </div>
-                                            <div>
-                                                <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{doc.filename}</div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                                    {doc.chunk_count} semantic chunks • Indexed {new Date(doc.uploaded_at).toLocaleDateString()}
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                <div style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px' }}>
+                                                    <FileText size={20} color="var(--text-secondary)" />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{doc.filename}</div>
+                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                                        {doc.chunk_count} semantic chunks • Indexed {new Date(doc.uploaded_at).toLocaleDateString()}
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <button
+                                                onClick={() => handleDelete(doc.document_id, doc.filename)}
+                                                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', padding: '8px', transition: '0.3s' }}
+                                                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
+                                                onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.3)')}
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
                                         </div>
-                                        <button
-                                            onClick={() => handleDelete(doc.document_id, doc.filename)}
-                                            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', padding: '8px', transition: '0.3s' }}
-                                            onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--danger)')}
-                                            onMouseLeave={(e) => (e.currentTarget.style.color = 'rgba(255,255,255,0.3)')}
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
+                                        <div style={{ display: 'flex', width: '100%', gap: '8px', marginTop: '16px' }}>
+                                            <button
+                                                onClick={() => handleCreateRoom(doc)}
+                                                style={{
+                                                    flex: 1,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    padding: '10px 16px',
+                                                    background: 'rgba(59, 130, 246, 0.2)',
+                                                    color: '#60a5fa',
+                                                    borderRadius: '8px',
+                                                    fontSize: '0.875rem',
+                                                    fontWeight: '500',
+                                                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.3)';
+                                                    e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.5)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.background = 'rgba(59, 130, 246, 0.2)';
+                                                    e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                                                }}
+                                                title="Create Multiplayer Room"
+                                            >
+                                                <Users size={16} style={{ marginRight: '8px' }} />
+                                                Create Multiplayer Room
+                                            </button>
+                                        </div>
                                     </motion.div>
                                 ))
                             )}

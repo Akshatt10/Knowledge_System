@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.services.auth import require_admin, get_db
-from app.models.database import User
+from app.models.database import User, Document
 from app.models.schemas import (
     HealthResponse, 
     StatsResponse, 
@@ -34,9 +34,10 @@ async def collection_stats(
 ):
     """Return high-level knowledge base statistics (Admin only)."""
     user_count = db.query(User).count()
+    doc_count = db.query(Document).count()
     stats = vector_store.get_collection_stats()
     return StatsResponse(
-        total_documents=stats["total_documents"],
+        total_documents=doc_count,
         total_chunks=stats["total_chunks"],
         total_users=user_count,
         collection_name=stats["collection_name"]

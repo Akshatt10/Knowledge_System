@@ -18,8 +18,13 @@ class VectorStoreService:
     """Wrapper around LangChain Pinecone integration + HuggingFaceEmbeddings."""
 
     def __init__(self) -> None:
+        import os
         logger.info("Loading HuggingFace embedding model: %s", settings.EMBEDDING_MODEL)
         self.embeddings = HuggingFaceEmbeddings(model_name=settings.EMBEDDING_MODEL)
+        
+        # Inject into os.environ to ensure all client libraries see it
+        if settings.PINECONE_API_KEY:
+            os.environ["PINECONE_API_KEY"] = settings.PINECONE_API_KEY
         
         if not settings.PINECONE_API_KEY:
             logger.warning("PINECONE_API_KEY not set. Pinecone features will not work.")
@@ -27,7 +32,7 @@ class VectorStoreService:
             return
 
         logger.info("Initializing LangChain Pinecone client")
-        pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+        self.pc = Pinecone(api_key=settings.PINECONE_API_KEY)
         
         self.vectorstore = PineconeVectorStore(
             index_name=settings.PINECONE_INDEX_NAME,
@@ -37,20 +42,27 @@ class VectorStoreService:
 
     def get_retriever(
         self,
-        user_id: str,
+        user_id: str | None = None,
         search_type: str = "similarity",
         search_kwargs: dict | None = None,
+        filter_dict: dict | None = None,
     ):
-        """Return a retriever scoped to a specific user using Pinecone metadata filtering."""
+        """Return a retriever scoped using Pinecone metadata filtering."""
 
         if search_kwargs is None:
             search_kwargs = {"k": 5}
+
+        final_filter = {}
+        if user_id:
+            final_filter["user_id"] = user_id
+        if filter_dict:
+            final_filter.update(filter_dict)
 
         return self.vectorstore.as_retriever(
             search_type=search_type,
             search_kwargs={
                 **search_kwargs,
-                "filter": {"user_id": user_id}
+                "filter": final_filter
             },
         )
 
@@ -76,6 +88,23 @@ class VectorStoreService:
         except Exception as e:
             logger.error("Failed to delete from pinecone: %s", str(e))
             return False
+
+    def get_collection_stats(self) -> dict:
+        """Return high-level stats for the Pinecone index."""
+        try:
+            if not settings.PINECONE_API_KEY or not self.pc:
+                return {"total_chunks": 0, "collection_name": "Pinecone (Disabled)"}
+                
+            index = self.pc.Index(settings.PINECONE_INDEX_NAME)
+            stats = index.describe_index_stats()
+            
+            return {
+                "total_chunks": stats.total_vector_count,
+                "collection_name": settings.PINECONE_INDEX_NAME
+            }
+        except Exception as e:
+            logger.error("Failed to fetch Pinecone stats: %s", str(e))
+            return {"total_chunks": 0, "collection_name": "Pinecone (Error)"}
 
 # ── Module-level singleton ─────────────────────────────────────────────
 vector_store = VectorStoreService()

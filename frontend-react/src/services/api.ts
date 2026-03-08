@@ -66,4 +66,17 @@ export const adminService = {
     deleteUser: (id: string) => api.delete(`/admin/users/${id}`),
 };
 
+// Room / Multiplayer Services
+export const roomService = {
+    // If documentId is empty, it creates a generic Global Room
+    createRoom: (documentId: string, name: string) =>
+        api.post(`/rooms?${documentId ? `document_id=${documentId}&` : ''}name=${encodeURIComponent(name)}`),
+    getHistory: (roomId: string) => api.get(`/rooms/${roomId}/history`),
+    getUserRooms: () => api.get(`/user/rooms`),
+    addDocumentToRoom: (roomId: string, documentId: string) =>
+        api.post(`/rooms/${roomId}/documents?document_id=${documentId}`),
+    getRoomDocuments: (roomId: string) => api.get(`/rooms/${roomId}/documents`),
+    leaveRoom: (roomId: string) => api.delete(`/rooms/${roomId}/leave`)
+};
+
 export default api;

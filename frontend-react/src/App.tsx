@@ -8,6 +8,7 @@ import Chat from './pages/Chat';
 import KnowledgeBase from './pages/KnowledgeBase';
 import AdminStats from './pages/AdminStats';
 import UserManagement from './pages/UserManagement';
+import { WebSocketProvider } from './context/WebSocketContext';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -23,50 +24,52 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 const App: React.FC = () => {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/login" element={<Login />} />
+      <WebSocketProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/login" element={<Login />} />
 
-          {/* Protected Application Routes */}
-          <Route
-            path="/chat"
-            element={
-              <ProtectedRoute>
-                <MainLayout><Chat /></MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/knowledge"
-            element={
-              <ProtectedRoute>
-                <MainLayout><KnowledgeBase /></MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              <ProtectedRoute adminOnly>
-                <MainLayout><UserManagement /></MainLayout>
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <ProtectedRoute adminOnly>
-                <MainLayout><AdminStats /></MainLayout>
-              </ProtectedRoute>
-            }
-          />
+            {/* Protected Application Routes */}
+            <Route
+              path="/chat"
+              element={
+                <ProtectedRoute>
+                  <MainLayout><Chat /></MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/knowledge"
+              element={
+                <ProtectedRoute>
+                  <MainLayout><KnowledgeBase /></MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute adminOnly>
+                  <MainLayout><UserManagement /></MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute adminOnly>
+                  <MainLayout><AdminStats /></MainLayout>
+                </ProtectedRoute>
+              }
+            />
 
-          {/* Default Redirects */}
-          <Route path="/" element={<Navigate to="/chat" replace />} />
-          <Route path="*" element={<Navigate to="/chat" replace />} />
-        </Routes>
-      </BrowserRouter>
+            {/* Default Redirects */}
+            <Route path="/" element={<Navigate to="/chat" replace />} />
+            <Route path="*" element={<Navigate to="/chat" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </WebSocketProvider>
     </AuthProvider>
   );
 };
