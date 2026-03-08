@@ -24,3 +24,4 @@ huggingface-hub
 PyPDF2
 pypdf
 docx2txt
+python-docx
