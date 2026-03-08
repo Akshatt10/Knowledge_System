@@ -9,7 +9,7 @@ alembic
 pydantic[email]
 pydantic-settings
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt
 boto3
 pinecone
 langchain
