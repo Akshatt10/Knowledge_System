@@ -8,6 +8,7 @@ import logging
 from typing import List, Dict
 
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
 from app.config import settings
 from app.services.vectorstore import vector_store
@@ -36,32 +37,47 @@ class RAGService:
     """Retrieval-Augmented Generation using LangChain."""
 
     def __init__(self) -> None:
-        self.llm = None
+        self.gemini_llm = None
+        self.openai_llm = None
 
         if settings.GEMINI_API_KEY:
-            self.llm = ChatGoogleGenerativeAI(
-                model=settings.LLM_MODEL,
-                temperature=0.0,  # deterministic answers for RAG
+            self.gemini_llm = ChatGoogleGenerativeAI(
+                model="gemini-2.5-flash", # Use standard stable model
+                temperature=0.0,
                 google_api_key=settings.GEMINI_API_KEY,
             )
-
-    def _get_llm(self):
-        if not self.llm:
-            raise ValueError(
-                "Gemini API key not configured. "
-                "Please add GEMINI_API_KEY to .env"
+        
+        if settings.OPENAI_API_KEY:
+            self.openai_llm = ChatOpenAI(
+                model=settings.LLM_MODEL,
+                temperature=0.0,
+                openai_api_key=settings.OPENAI_API_KEY,
             )
-        return self.llm
+
+    def _get_llm(self, provider: str = "openai"):
+        if provider == "gemini":
+            if not self.gemini_llm:
+                raise ValueError("Gemini API key not configured.")
+            return self.gemini_llm
+        
+        # Default to OpenAI for production reliability
+        if not self.openai_llm:
+            if self.gemini_llm:
+                logger.warning("OpenAI not configured, falling back to Gemini")
+                return self.gemini_llm
+            raise ValueError("No LLM provider configured. Add API keys to .env")
+        return self.openai_llm
 
     def answer_query(
         self,
         question: str,
         user_id: str,
         chat_history: list[dict[str, str]] | None = None,
+        provider: str = "openai",
     ) -> dict:
         """Execute RAG pipeline and return grounded answer."""
 
-        llm = self._get_llm()
+        llm = self._get_llm(provider=provider)
 
         # Better retriever with MMR for diverse but relevant chunks
         retriever = vector_store.get_retriever(
@@ -119,12 +135,25 @@ Answer the question using ONLY the context above.
         ]
 
         logger.info(
-            "Executing RAG for user %s with %d context chunks",
+            "Executing RAG for user %s with %d context chunks using %s",
             user_id,
-            len(docs)
+            len(docs),
+            provider
         )
 
-        response = llm.invoke(messages)
+        try:
+            response = llm.invoke(messages)
+        except Exception as e:
+            logger.warning("Primary LLM (%s) failed: %s", provider, str(e))
+            if provider == "gemini" and self.openai_llm:
+                logger.info("Automatically falling back to OpenAI LLM...")
+                response = self.openai_llm.invoke(messages)
+            elif provider == "openai" and self.gemini_llm:
+                logger.info("Automatically falling back to Gemini LLM...")
+                response = self.gemini_llm.invoke(messages)
+            else:
+                # If there's no backup configured, re-raise the error
+                raise
 
         answer_text = response.content.strip()
 

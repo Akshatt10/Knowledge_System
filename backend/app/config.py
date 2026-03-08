@@ -26,7 +26,8 @@ class Settings(BaseSettings):
     # LLM Configuration
     # ─────────────────────────────────────
     GEMINI_API_KEY: str = ""
-    LLM_MODEL: str = "gemini-2.5-flash"
+    OPENAI_API_KEY: str = ""
+    LLM_MODEL: str = "gpt-4o-mini"  # Default production model
 
     # ─────────────────────────────────────
     # Embeddings / RAG

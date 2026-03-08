@@ -51,7 +51,7 @@ export const documentService = {
 
 // Query Services
 export const queryService = {
-    ask: (data: { question: string; chat_history?: any[] }) =>
+    ask: (data: { question: string; provider: string; chat_history?: any[] }) =>
         api.post('/query', data),
 };
 

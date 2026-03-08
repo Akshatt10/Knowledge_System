@@ -37,7 +37,7 @@ const Sidebar: React.FC = () => {
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', paddingLeft: '8px' }}>
                 <Sparkles size={24} color="var(--accent-glow)" />
-                <h2 style={{ fontSize: '1.4rem', color: '#fff' }}>GenAI Hub</h2>
+                <h2 style={{ fontSize: '1.4rem', color: '#fff' }}>Nexus</h2>
             </div>
 
             <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>

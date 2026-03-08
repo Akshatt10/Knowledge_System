@@ -74,3 +74,39 @@ h4,
   background: radial-gradient(circle at 0% 0%, rgba(0, 240, 255, 0.05) 0%, transparent 40%),
     radial-gradient(circle at 100% 100%, rgba(0, 80, 255, 0.05) 0%, transparent 40%);
 }
+
+/* Markdown Rendering Styles */
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content p {
+  margin-bottom: 0.75rem;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-content strong {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}

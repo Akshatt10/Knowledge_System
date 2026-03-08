@@ -5,8 +5,10 @@ import {
     Sparkles,
     ChevronRight,
     FileText,
-    Loader2
+    Loader2,
+    Trash2
 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { queryService } from '../services/api';
 
 interface Message {
@@ -24,6 +26,9 @@ const Chat: React.FC = () => {
     });
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [provider, setProvider] = useState(() => {
+        return sessionStorage.getItem('chat_provider') || 'gemini';
+    });
     const [history, setHistory] = useState<any[]>(() => {
         const saved = sessionStorage.getItem('chat_history');
         return saved ? JSON.parse(saved) : [];
@@ -40,7 +45,16 @@ const Chat: React.FC = () => {
     useEffect(() => {
         sessionStorage.setItem('chat_messages', JSON.stringify(messages));
         sessionStorage.setItem('chat_history', JSON.stringify(history));
-    }, [messages, history]);
+        sessionStorage.setItem('chat_provider', provider);
+    }, [messages, history, provider]);
+
+    const handleClearChat = () => {
+        const initialMessage: Message = { role: 'ai', content: "Hello! I am your advanced RAG Intelligence Agent. I can analyze documents from our secure knowledge base. What would you like to know?" };
+        setMessages([initialMessage]);
+        setHistory([]);
+        sessionStorage.removeItem('chat_messages');
+        sessionStorage.removeItem('chat_history');
+    };
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,7 +68,8 @@ const Chat: React.FC = () => {
         try {
             const res = await queryService.ask({
                 question,
-                chat_history: history
+                chat_history: history,
+                provider
             });
 
             const data = res.data;
@@ -89,12 +104,44 @@ const Chat: React.FC = () => {
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 10px var(--success)' }}></div>
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: '600' }}>AI Research Assistant</h3>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: '600' }}>Nexus Intelligence</h3>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.3)', padding: '6px 14px', borderRadius: '20px', border: '1px solid var(--panel-border)' }}>
-                        <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--accent-glow)', boxShadow: '0 0 8px var(--accent-glow)' }}></div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: '600', letterSpacing: '0.05em' }}>GEMINI POWERED</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '12px', border: '1px solid var(--panel-border)' }}>
+                        <button
+                            onClick={() => setProvider('openai')}
+                            style={{
+                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '600',
+                                background: provider === 'openai' ? 'var(--accent-gradient)' : 'transparent',
+                                color: provider === 'openai' ? '#fff' : 'var(--text-secondary)',
+                                border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                        >
+                            OPENAI
+                        </button>
+                        <button
+                            onClick={() => setProvider('gemini')}
+                            style={{
+                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '600',
+                                background: provider === 'gemini' ? 'var(--accent-gradient)' : 'transparent',
+                                color: provider === 'gemini' ? '#fff' : 'var(--text-secondary)',
+                                border: 'none', cursor: 'pointer', transition: 'all 0.2s'
+                            }}
+                        >
+                            GEMINI
+                        </button>
+                        <button
+                            onClick={handleClearChat}
+                            title="Clear Chat"
+                            style={{
+                                background: 'transparent', border: 'none', color: 'var(--text-secondary)',
+                                cursor: 'pointer', padding: '6px', borderRadius: '8px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                transition: 'var(--transition-bounce)'
+                            }}
+                        >
+                            <Trash2 size={18} />
+                        </button>
                     </div>
                 </div>
 
@@ -125,8 +172,8 @@ const Chat: React.FC = () => {
                                     background: msg.role === 'user' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
                                     padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--panel-border)'
                                 }}>
-                                    <div style={{ lineHeight: '1.6', fontSize: '0.95rem', color: '#fff', whiteSpace: 'pre-wrap' }}>
-                                        {msg.content}
+                                    <div className="markdown-content" style={{ fontSize: '0.95rem', color: '#fff' }}>
+                                        <ReactMarkdown>{msg.content}</ReactMarkdown>
                                     </div>
 
                                     {msg.sources && msg.sources.length > 0 && (
