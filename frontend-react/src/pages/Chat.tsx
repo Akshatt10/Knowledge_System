@@ -372,7 +372,8 @@ const Chat: React.FC = () => {
                             const isSystem = msg.role === 'system';
                             const content = msg.content;
                             const isMe = msg.sender === user?.email.split('@')[0];
-                            const senderName = isUser ? (isMe ? 'You' : msg.sender) : (isSystem ? 'System' : 'Aurora AI');
+                            const senderName = isUser ? (isMe ? 'You' : msg.sender) : (isSystem ? 'System' : 'Nexus AI');
+                            const isRightSide = isUser && (!isMultiplayer || isMe);
 
                             if (isSystem) {
                                 return (
@@ -394,20 +395,20 @@ const Chat: React.FC = () => {
                                     animate={{ opacity: 1, y: 0 }}
                                     style={{
                                         display: 'flex', gap: '16px', flexDirection: 'column',
-                                        maxWidth: '85%', alignSelf: isUser ? 'flex-end' : 'flex-start',
+                                        maxWidth: '85%', alignSelf: isRightSide ? 'flex-end' : 'flex-start',
                                     }}
                                 >
                                     {isMultiplayer && (
                                         <div style={{
                                             color: isUser ? (isMe ? '#60a5fa' : '#818cf8') : '#34d399',
                                             fontWeight: '600', fontSize: '0.8rem', paddingLeft: '4px',
-                                            alignSelf: isUser ? 'flex-end' : 'flex-start'
+                                            alignSelf: isRightSide ? 'flex-end' : 'flex-start'
                                         }}>
                                             {senderName}
                                         </div>
                                     )}
 
-                                    <div style={{ display: 'flex', gap: '16px', flexDirection: isUser ? 'row-reverse' : 'row' }}>
+                                    <div style={{ display: 'flex', gap: '16px', flexDirection: isRightSide ? 'row-reverse' : 'row' }}>
                                         <div style={{
                                             width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
                                             display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -418,9 +419,9 @@ const Chat: React.FC = () => {
                                         </div>
 
                                         <div style={{
-                                            background: isUser ? (isMultiplayer && isMe ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.08)') : 'rgba(255,255,255,0.03)',
+                                            background: isRightSide ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)',
                                             padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid',
-                                            borderColor: isUser ? (isMultiplayer && isMe ? 'rgba(59, 130, 246, 0.4)' : 'var(--panel-border)') : 'var(--panel-border)'
+                                            borderColor: isRightSide ? 'rgba(59, 130, 246, 0.4)' : 'var(--panel-border)'
                                         }}>
                                             <div className="markdown-content" style={{ fontSize: '0.95rem', color: '#fff' }}>
                                                 <ReactMarkdown>{msg.content}</ReactMarkdown>
@@ -489,7 +490,7 @@ const Chat: React.FC = () => {
                                 }
                             }}
                             disabled={isMultiplayer && !isConnected}
-                            placeholder={isMultiplayer && !isConnected ? "Connecting to multiplayer room..." : "Query the knowledge base... (Shift+Enter for newline)"}
+                            placeholder={isMultiplayer && !isConnected ? "Connecting to multiplayer room..." : isMultiplayer ? "Type @ai to ask the Agent... or just chat here" : "Query the knowledge base... (Shift+Enter for newline)"}
                             style={{
                                 flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid var(--panel-border)',
                                 borderRadius: 'var(--radius-md)', padding: '16px', color: '#fff',
