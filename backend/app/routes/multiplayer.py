@@ -11,6 +11,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, HTTPExce
 from sqlalchemy.orm import Session
 from starlette.websockets import WebSocketState
 from jose import jwt
+import re
 
 from app.models.database import Room, RoomMember, RoomDocument, ChatMessage, User, Document
 from app.services.auth import get_db, get_current_user
@@ -254,6 +255,19 @@ async def websocket_endpoint(
                 "content": prompt
             })
 
+            # Check if this is a directed ping to the AI
+            is_ai_ping = "@ai" in prompt.lower()
+            
+            # If it's just a regular chat message between humans, we stop here
+            if not is_ai_ping:
+                continue
+                
+            # If it IS an AI ping, strip the '@ai' flag so the LLM doesn't get confused
+            llm_prompt = re.sub(r'(?i)@ai', '', prompt).strip()
+            # If they just typed "@ai" with no question, ignore it
+            if not llm_prompt:
+                continue
+
             # B. Invoke LLM logic (Enterprise RAG pipeline for shared room documents)
             
             # 1: Find all documents associated with this room via the mapping table
@@ -274,7 +288,7 @@ async def websocket_endpoint(
                     search_type="mmr",
                     search_kwargs={"k": 7, "fetch_k": 25}
                 )
-                docs = retriever.invoke(prompt)
+                docs = retriever.invoke(llm_prompt)
             else:
                 # No documents attached to room, pure LLM chat
                 docs = []
