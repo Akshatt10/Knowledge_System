@@ -1,0 +1,49 @@
+name: Deploy Backend to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd ~/Knowledge_System
+          
+          # Pull latest changes from the main branch
+          git fetch origin main
+          git reset --hard origin/main
+          
+          # Navigate to backend directory
+          cd backend
+          
+          # Stop the existing container
+          docker rm -f nexus-api || true
+          
+          # Build the new Docker image locally on the EC2 instance
+          docker build -t nexus-backend .
+          
+          # Run the new container, passing the existing .env file
+          docker run -d --name nexus-api \
+            -p 8000:8000 \
+            --env-file .env \
+            --restart unless-stopped \
+            nexus-backend
+          
+          # Clean up unused docker images to save EBS volumes storage
+          docker image prune -f
