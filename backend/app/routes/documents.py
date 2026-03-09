@@ -20,7 +20,7 @@ from app.models.schemas import (
 )
 from app.services.ingestion import ingest_document
 from app.services.vectorstore import vector_store
-from app.utils.extractors import SUPPORTED_EXTENSIONS
+from app.services.s3 import s3_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Documents"])
@@ -58,7 +58,7 @@ async def upload_document(
             logger.exception(f"Failed to save {file.filename}")
             continue
 
-        # Ingest
+        # Ingest (Embed -> Encrypt -> Upload)
         try:
             result = ingest_document(
                 file_path=str(upload_path),
@@ -66,11 +66,6 @@ async def upload_document(
                 file_type=ext.lstrip("."),
                 user_id=str(current_user.id)
             )
-            results.append(UploadResult(
-                document_id=result["document_id"],
-                filename=result["filename"],
-                chunk_count=result["chunk_count"]
-            ))
         except Exception as exc:
             logger.exception(f"Ingestion failed for {file.filename}")
             upload_path.unlink(missing_ok=True)
@@ -84,18 +79,30 @@ async def upload_document(
                 filename=result["filename"],
                 file_type=ext.lstrip("."),
                 chunk_count=str(result["chunk_count"]),
+                is_encrypted="TRUE",
+                encrypted_dek=result.get("encrypted_dek"),
+                s3_uri=result.get("s3_uri")
             )
             db.add(db_doc)
             db.commit()
             
-            # ZERO-RETENTION SECURITY POLICY:
-            # Immediately destroy the physical file after successful vectorization.
-            # We ONLY retain the mathematical embeddings in Pinecone.
+            results.append(UploadResult(
+                document_id=result["document_id"],
+                filename=result["filename"],
+                chunk_count=result["chunk_count"]
+            ))
+
+            # Security: Wipe local raw file
             upload_path.unlink(missing_ok=True)
             
         except Exception as exc:
             logger.exception(f"Failed to save document metadata to Postgres for {file.filename}")
             db.rollback()
+            # ROLLBACK: If DB fails, delete S3 backup
+            if "object_name" in result:
+                s3_service.delete_file(result["object_name"])
+            upload_path.unlink(missing_ok=True)
+            continue
 
     if not results:
         raise HTTPException(status_code=400, detail="No valid documents were uploaded.")
@@ -134,24 +141,24 @@ async def delete_document(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Delete a document belonging to the current user."""
-    # Delete from Pinecone
-    vector_store.delete_document(doc_id, user_id=str(current_user.id))
-    
-    # Delete from Postgres
+    # 1. Fetch from Postgres
     doc = db.query(Document).filter(Document.id == doc_id, Document.user_id == str(current_user.id)).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found.")
-        
+
+    # 2. Delete from Pinecone
+    vector_store.delete_document(doc_id, user_id=str(current_user.id))
+    
+    # 3. Delete from S3 (Backup)
+    if doc.s3_uri:
+        try:
+            object_key = doc.s3_uri.replace(f"s3://{settings.S3_BUCKET_NAME}/", "")
+            s3_service.delete_file(object_key)
+        except Exception as e:
+            logger.error(f"Failed to delete S3 object for {doc_id}: {e}")
+
+    # 4. Delete from Postgres
     db.delete(doc)
     db.commit()
-
-    # Try to remove from filesystem
-    upload_dir = Path(settings.UPLOAD_DIR)
-    for f in upload_dir.iterdir():
-        # We can't perfectly reverse doc_id → filename, so we rely on
-        # metadata stored in the vector store. The file remains on disk
-        # as a minor trade-off.
-        pass
 
     return DeleteResponse(message="Document deleted successfully.", document_id=doc_id)

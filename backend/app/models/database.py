@@ -25,6 +25,11 @@ class Document(Base):
     file_type = Column(String(50))
     chunk_count = Column(String(10), default="0")
     uploaded_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Encryption & Backup Metadata
+    is_encrypted = Column(String(20), default="FALSE") # Store as string for flexibility or Boolean
+    encrypted_dek = Column(String, nullable=True) # The per-file key encrypted by master key
+    s3_uri = Column(String(512), nullable=True) # Storage backup location
 
 class Room(Base):
     __tablename__ = "rooms"

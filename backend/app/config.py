@@ -80,6 +80,11 @@ class Settings(BaseSettings):
     S3_BUCKET_NAME: str = "nexus-knowledge-base-2026"
 
     # ─────────────────────────────────────
+    # Encryption
+    # ─────────────────────────────────────
+    DOCUMENT_ENCRYPTION_KEY: str = "" # Master Key (32-byte base64)
+
+    # ─────────────────────────────────────
     # Auth
     # ─────────────────────────────────────
     JWT_SECRET: str = "super_secret_jwt_key_change_in_production"
