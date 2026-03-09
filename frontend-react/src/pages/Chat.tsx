@@ -68,6 +68,10 @@ const Chat: React.FC = () => {
     const [roomDocuments, setRoomDocuments] = useState<any[]>([]);
     const [addingDoc, setAddingDoc] = useState<string | null>(null);
 
+    // Create Room Modal State
+    const [showRoomModal, setShowRoomModal] = useState(false);
+    const [newRoomName, setNewRoomName] = useState('');
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     // Dynamic resolution based on mode
@@ -132,14 +136,18 @@ const Chat: React.FC = () => {
         sessionStorage.removeItem('chat_history');
     };
 
-    const handleCreateGlobalRoom = async () => {
+    const handleOpenRoomModal = () => {
+        setNewRoomName('');
+        setShowRoomModal(true);
+    };
+
+    const handleCreateGlobalRoom = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        const finalName = newRoomName.trim() || 'My Collaboration Room';
         try {
-            // Note: In real app, you might want to ask them to select a doc first. 
-            // Here we just create a room without a linked document id for general chat, 
-            // or we disable it if they haven't chosen a document in Knowledge base.
-            // Let's create a generic "Global Room" just for LLM chatting.
-            const res = await roomService.createRoom("", 'Global Collaboration');
+            const res = await roomService.createRoom("", finalName);
             setSearchParams({ room: res.data.room_id });
+            setShowRoomModal(false);
         } catch (err) {
             console.error("Failed to create unified room", err);
         }
@@ -271,7 +279,7 @@ const Chat: React.FC = () => {
 
                         {!isMultiplayer && (
                             <button
-                                onClick={handleCreateGlobalRoom}
+                                onClick={handleOpenRoomModal}
                                 style={{
                                     display: 'flex', alignItems: 'center', gap: '6px',
                                     padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '600',
@@ -568,6 +576,67 @@ const Chat: React.FC = () => {
                             )}
                         </div>
                     </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Create Room Modal */}
+            <AnimatePresence>
+                {showRoomModal && (
+                    <div style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+                    }}>
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="glass-panel"
+                            style={{ padding: '30px', width: '400px', display: 'flex', flexDirection: 'column', gap: '20px' }}
+                        >
+                            <h3 style={{ fontSize: '1.2rem', fontWeight: '600', color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <Users size={20} color="#60a5fa" /> Create Collaboration Room
+                            </h3>
+                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                                Give your team's workspace a name. You can invite friends and share documents once inside.
+                            </p>
+                            <form onSubmit={handleCreateGlobalRoom} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    placeholder="e.g. Project Phoenix, Q3 Legal Review..."
+                                    value={newRoomName}
+                                    onChange={(e) => setNewRoomName(e.target.value)}
+                                    style={{
+                                        background: 'rgba(0,0,0,0.4)', border: '1px solid var(--panel-border)',
+                                        padding: '12px 16px', borderRadius: '8px', color: '#fff', fontSize: '0.95rem'
+                                    }}
+                                />
+                                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowRoomModal(false)}
+                                        style={{
+                                            padding: '10px 16px', borderRadius: '8px', background: 'transparent',
+                                            border: '1px solid var(--panel-border)', color: 'var(--text-secondary)', cursor: 'pointer'
+                                        }}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        style={{
+                                            padding: '10px 16px', borderRadius: '8px', background: 'var(--accent-gradient)',
+                                            border: 'none', color: '#fff', fontWeight: '600', cursor: 'pointer',
+                                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
+                                        }}
+                                    >
+                                        Create Room
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>

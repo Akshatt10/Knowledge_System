@@ -87,6 +87,12 @@ async def upload_document(
             )
             db.add(db_doc)
             db.commit()
+            
+            # ZERO-RETENTION SECURITY POLICY:
+            # Immediately destroy the physical file after successful vectorization.
+            # We ONLY retain the mathematical embeddings in Pinecone.
+            upload_path.unlink(missing_ok=True)
+            
         except Exception as exc:
             logger.exception(f"Failed to save document metadata to Postgres for {file.filename}")
             db.rollback()
