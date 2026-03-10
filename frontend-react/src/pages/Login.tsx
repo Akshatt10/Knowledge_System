@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/api';
-import { Sparkles, Mail, Lock, LogIn, UserPlus, AlertCircle, Loader2 } from 'lucide-react';
+import { Sparkles, Mail, Lock, LogIn, UserPlus, AlertCircle, Loader2, Eye, EyeOff, ShieldCheck, Brain, Users, X } from 'lucide-react';
 
 const Login: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -11,6 +11,11 @@ const Login: React.FC = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showWelcome, setShowWelcome] = useState(false);
+
+    // Pending auth data to apply after the user dismisses the welcome modal
+    const [pendingAuth, setPendingAuth] = useState<{ token: string; role: string; email: string } | null>(null);
 
     const { login: setAuth } = useAuth();
     const navigate = useNavigate();
@@ -20,10 +25,25 @@ const Login: React.FC = () => {
     const fromSearch = (location.state as any)?.from?.search || '';
     const destination = `${fromPath}${fromSearch}`;
 
+    const validateInputs = (): string | null => {
+        if (!email.trim()) return 'Please enter your email address.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return 'Please enter a valid email address.';
+        if (!password) return 'Please enter your password.';
+        if (!isLogin && password.length < 6) return 'Password must be at least 6 characters.';
+        return null;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
         setError(null);
+
+        const validationError = validateInputs();
+        if (validationError) {
+            setError(validationError);
+            return;
+        }
+
+        setLoading(true);
 
         try {
             if (isLogin) {
@@ -33,15 +53,33 @@ const Login: React.FC = () => {
 
                 const res = await authService.login(formData);
                 setAuth(res.data.access_token, res.data.role, email);
+                navigate(destination, { replace: true });
             } else {
                 const res = await authService.register({ email, password });
-                setAuth(res.data.access_token, res.data.role, email);
+                // Don't navigate yet — show welcome modal first
+                setPendingAuth({ token: res.data.access_token, role: res.data.role, email });
+                setShowWelcome(true);
             }
-            navigate(destination, { replace: true });
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Authentication failed. Please check your credentials.');
+            const detail = err.response?.data?.detail;
+            if (typeof detail === 'string') {
+                setError(detail);
+            } else if (Array.isArray(detail)) {
+                // FastAPI validation errors come as an array
+                setError(detail.map((d: any) => d.msg).join('. '));
+            } else {
+                setError('Authentication failed. Please check your credentials.');
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDismissWelcome = () => {
+        setShowWelcome(false);
+        if (pendingAuth) {
+            setAuth(pendingAuth.token, pendingAuth.role, pendingAuth.email);
+            navigate(destination, { replace: true });
         }
     };
 
@@ -78,7 +116,7 @@ const Login: React.FC = () => {
                             <Mail size={18} className="absolute left-4 text-textSec group-focus-within:text-accentGlow transition-colors" />
                             <input
                                 type="email" required
-                                value={email} onChange={(e) => setEmail(e.target.value)}
+                                value={email} onChange={(e) => { setEmail(e.target.value); setError(null); }}
                                 placeholder="you@example.com"
                                 className="w-full py-3.5 pr-4 pl-12 bg-black/20 border border-white/10 rounded-xl text-white text-[0.95rem] outline-none transition-all duration-300 focus:border-accentGlow/50 focus:bg-black/40 focus:ring-4 focus:ring-accentGlow/10 placeholder:text-white/20"
                             />
@@ -90,12 +128,23 @@ const Login: React.FC = () => {
                         <div className="relative flex items-center">
                             <Lock size={18} className="absolute left-4 text-textSec group-focus-within:text-accentGlow transition-colors" />
                             <input
-                                type="password" required
-                                value={password} onChange={(e) => setPassword(e.target.value)}
+                                type={showPassword ? 'text' : 'password'} required
+                                value={password} onChange={(e) => { setPassword(e.target.value); setError(null); }}
                                 placeholder="••••••••"
-                                className="w-full py-3.5 pr-4 pl-12 bg-black/20 border border-white/10 rounded-xl text-white text-[0.95rem] outline-none transition-all duration-300 focus:border-accentGlow/50 focus:bg-black/40 focus:ring-4 focus:ring-accentGlow/10 placeholder:text-white/20"
+                                className="w-full py-3.5 pr-12 pl-12 bg-black/20 border border-white/10 rounded-xl text-white text-[0.95rem] outline-none transition-all duration-300 focus:border-accentGlow/50 focus:bg-black/40 focus:ring-4 focus:ring-accentGlow/10 placeholder:text-white/20"
                             />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                tabIndex={-1}
+                                className="absolute right-4 text-textSec hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
                         </div>
+                        {!isLogin && password.length > 0 && password.length < 6 && (
+                            <p className="text-[0.75rem] text-amber-400/80 mt-2 ml-1">Password must be at least 6 characters</p>
+                        )}
                     </div>
 
                     <AnimatePresence mode="wait">
@@ -127,7 +176,7 @@ const Login: React.FC = () => {
                     <div className="text-center mt-4">
                         <button
                             type="button"
-                            onClick={() => setIsLogin(!isLogin)}
+                            onClick={() => { setIsLogin(!isLogin); setError(null); }}
                             className="bg-transparent border-none text-textSec hover:text-white cursor-pointer text-sm font-medium transition-colors"
                         >
                             {isLogin ? (
@@ -139,8 +188,83 @@ const Login: React.FC = () => {
                     </div>
                 </form>
             </motion.div>
+
+            {/* ── Welcome Disclaimer Modal ──────────────────────────── */}
+            <AnimatePresence>
+                {showWelcome && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+                    >
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                            transition={{ duration: 0.3 }}
+                            className="glass-panel max-w-[520px] w-full p-8 relative shadow-2xl"
+                        >
+                            <button
+                                onClick={handleDismissWelcome}
+                                className="absolute top-4 right-4 text-textSec hover:text-white transition-colors bg-transparent border-none cursor-pointer p-1"
+                            >
+                                <X size={20} />
+                            </button>
+
+                            <div className="text-center mb-6">
+                                <div className="w-14 h-14 mx-auto mb-4 flex items-center justify-center rounded-2xl bg-accent-gradient shadow-glow">
+                                    <Sparkles size={28} className="text-white" />
+                                </div>
+                                <h2 className="text-2xl font-outfit font-bold text-white mb-1">Welcome to Nexus! 🎉</h2>
+                                <p className="text-textSec text-sm">Your intelligent knowledge companion</p>
+                            </div>
+
+                            <div className="flex flex-col gap-4 mb-8">
+                                <div className="flex items-start gap-4 p-4 bg-black/30 rounded-xl border border-white/5">
+                                    <div className="p-2 bg-accentGlow/10 rounded-lg shrink-0">
+                                        <Brain size={20} className="text-accentGlow" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-white mb-1">AI-Powered Document Intelligence</h4>
+                                        <p className="text-xs text-textSec leading-relaxed">Upload PDFs, DOCX, or text files and instantly ask questions. Nexus uses RAG (Retrieval-Augmented Generation) to give you precise, sourced answers.</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4 p-4 bg-black/30 rounded-xl border border-white/5">
+                                    <div className="p-2 bg-success/10 rounded-lg shrink-0">
+                                        <ShieldCheck size={20} className="text-success" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-white mb-1">Enterprise-Grade Security</h4>
+                                        <p className="text-xs text-textSec leading-relaxed">Your documents are protected with envelope encryption (AES-256). Files are encrypted locally before being backed up to cloud storage. Zero-trust architecture.</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-4 p-4 bg-black/30 rounded-xl border border-white/5">
+                                    <div className="p-2 bg-accentSec/10 rounded-lg shrink-0">
+                                        <Users size={20} className="text-accentSec" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-semibold text-white mb-1">Real-Time Collaboration</h4>
+                                        <p className="text-xs text-textSec leading-relaxed">Create chat rooms, share documents with teammates, and query AI together. All conversations are persisted and synced in real-time via WebSockets.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={handleDismissWelcome}
+                                className="w-full py-3.5 rounded-xl bg-accent-gradient text-white font-bold text-sm cursor-pointer flex items-center justify-center gap-2 shadow-glow hover:shadow-[0_0_25px_rgba(0,240,255,0.6)] hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 border-none"
+                            >
+                                Get Started <LogIn size={18} />
+                            </button>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
 
 export default Login;
+

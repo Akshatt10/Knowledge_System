@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from langchain_community.document_loaders import PyPDFLoader, TextLoader, Docx2txtLoader
-from langchain_experimental.text_splitter import SemanticChunker
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.config import settings
 from app.services.vectorstore import vector_store
@@ -17,6 +17,8 @@ from app.utils.encryption import encryption_service
 from app.services.s3 import s3_service
 
 logger = logging.getLogger(__name__)
+
+MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB hard limit
 
 
 def ingest_document(file_path: str | Path, filename: str, file_type: str, user_id: str) -> dict:
@@ -30,10 +32,13 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str, user_i
     """
     doc_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
-    
-    # 0. Read raw bytes once (to avoid multiple disk reads and ensure consistency)
+
+    # 0. Read raw bytes once and validate size
     with open(file_path, "rb") as f:
         raw_bytes = f.read()
+
+    if len(raw_bytes) > MAX_FILE_SIZE_BYTES:
+        raise ValueError(f"File '{filename}' exceeds the 20 MB limit ({len(raw_bytes) / 1024 / 1024:.1f} MB).")
 
     # 1. AI Processing (Perform this FIRST to fail fast)
     loader_map = {
@@ -42,24 +47,25 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str, user_i
         "docx": Docx2txtLoader,
         "json": TextLoader
     }
-    
+
     loader_class = loader_map.get(file_type.lower())
     if not loader_class:
         raise ValueError(f"Unsupported file type: {file_type}")
-        
+
     # Python loaders often need a file path, so we use the local temp file
     loader = loader_class(str(file_path))
     raw_docs = loader.load()
-    
+
     if not raw_docs:
         raise ValueError(f"No text could be extracted from '{filename}'.")
 
-    splitter = SemanticChunker(
-        vector_store.embeddings,
-        breakpoint_threshold_type="percentile",
-        breakpoint_threshold_amount=80
+    # RecursiveCharacterTextSplitter — pure string ops, no embedding calls.
+    # ~1000x faster than SemanticChunker on constrained hardware.
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=settings.CHUNK_SIZE or 1000,
+        chunk_overlap=settings.CHUNK_OVERLAP or 150,
     )
-    
+
     temp_chunks = splitter.split_documents(raw_docs)
     chunks = []
     for chunk in temp_chunks:
@@ -83,7 +89,7 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str, user_i
     # 2. ENVELOPE ENCRYPTION (Local)
     dek = encryption_service.generate_dek()
     encrypted_bytes = encryption_service.encrypt_file(raw_bytes, dek)
-    
+
     # Encrypt the DEK with our master key for storage in Postgres
     encrypted_dek_b64 = encryption_service.encrypt_dek(dek)
 
@@ -100,5 +106,5 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str, user_i
         "s3_uri": s3_uri,
         "is_encrypted": True,
         "encrypted_dek": encrypted_dek_b64,
-        "object_name": object_name # Crucial for rollback logic
+        "object_name": object_name  # Crucial for rollback logic
     }

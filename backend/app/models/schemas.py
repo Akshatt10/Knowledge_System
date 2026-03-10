@@ -22,6 +22,23 @@ class UploadResponse(BaseModel):
     total_files: int
 
 
+class UploadJobResponse(BaseModel):
+    """Returned immediately when upload is accepted for background processing."""
+    job_id: str
+    filename: str
+    status: str = "pending"
+    message: str = "File accepted. Processing in background."
+
+
+class JobStatusResponse(BaseModel):
+    """Status of a background ingestion job."""
+    job_id: str
+    status: str  # pending | processing | done | failed
+    filename: str
+    result: UploadResult | None = None
+    error: str | None = None
+
+
 class DocumentInfo(BaseModel):
     """Metadata for a single document in the knowledge base."""
 

@@ -40,7 +40,7 @@ const Sidebar: React.FC = () => {
 
     const navItems = [
         { to: '/chat', label: 'Chat Hub', icon: <MessageSquare size={20} /> },
-        { to: '/knowledge', label: 'Knowledge Base', icon: <Upload size={20} /> },
+        { to: '/knowledge', label: 'Documents', icon: <Upload size={20} /> },
     ];
 
     const adminItems = [
