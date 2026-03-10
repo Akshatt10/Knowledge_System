@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Shield,
     User,
@@ -7,7 +7,8 @@ import {
     RefreshCw,
     Search,
     Loader2,
-    AlertCircle
+    AlertCircle,
+    Users
 } from 'lucide-react';
 import { adminService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -53,7 +54,7 @@ const UserManagement: React.FC = () => {
         try {
             await adminService.updateUser(userId, { role: newRole });
             await loadUsers();
-        } catch (err) {
+        } catch {
             alert('Failed to update role');
         } finally {
             setActionLoading(null);
@@ -72,7 +73,7 @@ const UserManagement: React.FC = () => {
         try {
             await adminService.deleteUser(userId);
             await loadUsers();
-        } catch (err) {
+        } catch {
             alert('Failed to delete user');
         } finally {
             setActionLoading(null);
@@ -85,145 +86,187 @@ const UserManagement: React.FC = () => {
     );
 
     return (
-        <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
-            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
+        <div className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative">
+            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
+
+            <div className="max-w-7xl mx-auto space-y-8">
+                {/* Header */}
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h1 style={{ fontSize: '2rem', marginBottom: '8px' }}>User Management</h1>
-                        <p style={{ color: 'var(--text-secondary)' }}>Manage platform access control and administrative roles.</p>
+                        <h1 className="text-3xl font-outfit font-bold text-white flex items-center gap-3">
+                            <Users className="text-purple-400" /> User Management
+                        </h1>
+                        <p className="text-textSec mt-1 text-sm md:text-base">Manage platform access control and administrative roles.</p>
                     </div>
                     <button
                         onClick={loadUsers}
-                        className="glass-panel"
-                        style={{ padding: '10px 16px', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--panel-border)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                        disabled={loading}
+                        className="glass-panel flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
                     >
-                        {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                        Sync Users
+                        {loading ? <Loader2 size={18} className="animate-spin text-purple-400" /> : <RefreshCw size={18} className="text-purple-400" />}
+                        {loading ? 'Syncing...' : 'Sync Users'}
                     </button>
                 </div>
 
-                <div className="glass-panel" style={{ padding: '24px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <Search size={20} color="var(--text-secondary)" />
+                {/* Search Bar */}
+                <div className="glass-panel p-4 md:p-5 rounded-2xl flex items-center gap-4 border border-white/10 bg-black/40 backdrop-blur-xl shadow-lg focus-within:border-purple-500/50 focus-within:ring-4 focus-within:ring-purple-500/10 transition-all">
+                    <Search size={22} className="text-textSec" />
                     <input
                         type="text"
                         placeholder="Search users by email or role..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        style={{ background: 'none', border: 'none', color: '#fff', outline: 'none', flex: 1, fontSize: '1rem' }}
+                        className="bg-transparent border-none text-white outline-none flex-1 text-[1rem] placeholder:text-textSec/50"
                     />
                 </div>
 
-                <div className="glass-panel" style={{ overflow: 'hidden' }}>
-                    <div style={{ padding: '20px 24px', background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--panel-border)', display: 'grid', gridTemplateColumns: 'minmax(300px, 2fr) 1fr 1fr 120px', fontWeight: '600', fontSize: '0.85rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                {/* Users Table */}
+                <div className="glass-panel rounded-2xl border border-white/10 overflow-hidden shadow-2xl bg-black/40 backdrop-blur-xl relative">
+                    <div className="absolute left-0 top-0 w-64 h-64 bg-purple-500/5 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
+
+                    {/* Table Header */}
+                    <div className="px-6 py-4 bg-white/5 border-b border-white/10 grid grid-cols-[1fr_120px_100px_100px] md:grid-cols-[2fr_1fr_1fr_120px] gap-4 font-bold text-xs text-textSec uppercase tracking-wider">
                         <div>User Account</div>
-                        <div>Assigned Role</div>
-                        <div>Status</div>
-                        <div style={{ textAlign: 'right' }}>Actions</div>
+                        <div className="hidden md:block">Assigned Role</div>
+                        <div className="hidden md:block">Status</div>
+                        <div className="text-right">Actions</div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    {/* Table Body */}
+                    <div className="flex flex-col min-h-[300px]">
                         {loading ? (
-                            <div style={{ padding: '80px', textAlign: 'center', opacity: 0.5 }}>
-                                <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 16px' }} />
-                                Processing users...
+                            <div className="flex-1 flex flex-col items-center justify-center p-12 text-textSec opacity-70">
+                                <Loader2 size={40} className="animate-spin mb-4 text-purple-400 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
+                                <span className="text-sm font-medium">Processing user registry...</span>
                             </div>
                         ) : filteredUsers.length === 0 ? (
-                            <div style={{ padding: '80px', textAlign: 'center', opacity: 0.5 }}>
-                                No users found matching your search.
+                            <div className="flex-1 flex flex-col items-center justify-center p-12 text-textSec opacity-70">
+                                <Users size={40} className="mb-4 opacity-50" />
+                                <span className="text-sm font-medium">No users found matching your search.</span>
                             </div>
                         ) : (
-                            filteredUsers.map((u, idx) => (
-                                <motion.div
-                                    key={u.id}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: idx * 0.05 }}
-                                    style={{
-                                        padding: '20px 24px',
-                                        display: 'grid',
-                                        gridTemplateColumns: 'minmax(300px, 2fr) 1fr 1fr 120px',
-                                        alignItems: 'center',
-                                        borderBottom: idx === filteredUsers.length - 1 ? 'none' : '1px solid var(--panel-border)',
-                                        background: u.id === currentUser?.id ? 'rgba(0, 240, 255, 0.03)' : 'transparent'
-                                    }}
-                                >
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            <User size={20} color={u.id === currentUser?.id ? 'var(--accent-glow)' : 'var(--text-secondary)'} />
-                                        </div>
-                                        <div>
-                                            <div style={{ fontWeight: '600' }}>{u.email}</div>
-                                            <div style={{ fontSize: '0.75rem', opacity: 0.5 }}>UID: {u.id.substring(0, 8)}...</div>
-                                        </div>
-                                    </div>
+                            <AnimatePresence>
+                                {filteredUsers.map((u, idx) => {
+                                    const isMe = u.id === currentUser?.id;
+                                    const isAdmin = u.role === 'ADMIN';
 
-                                    <div>
-                                        <span style={{
-                                            padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700',
-                                            background: u.role === 'ADMIN' ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255,255,255,0.05)',
-                                            color: u.role === 'ADMIN' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                                            border: `1px solid ${u.role === 'ADMIN' ? 'rgba(0, 240, 255, 0.2)' : 'rgba(255,255,255,0.1)'}`
-                                        }}>
-                                            {u.role.toUpperCase()}
-                                        </span>
-                                    </div>
+                                    return (
+                                        <motion.div
+                                            key={u.id}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: 10 }}
+                                            transition={{ delay: idx * 0.05 }}
+                                            className={`px-6 py-5 grid grid-cols-[1fr_120px_100px_100px] md:grid-cols-[2fr_1fr_1fr_120px] gap-4 items-center border-b border-white/5 transition-colors hover:bg-white/5 ${isMe ? 'bg-purple-500/5 hover:bg-purple-500/10' : ''} ${idx === filteredUsers.length - 1 ? 'border-none' : ''}`}
+                                        >
+                                            <div className="flex items-center gap-4 min-w-0">
+                                                <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center border shadow-sm ${isMe ? 'bg-purple-500/20 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/10 text-textSec'}`}>
+                                                    <User size={18} className={isMe ? 'drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]' : ''} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <div className="font-bold text-white/90 text-[0.95rem] truncate flex items-center gap-2">
+                                                        {u.email}
+                                                        {isMe && <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-md border border-purple-500/30 uppercase tracking-wider font-bold shrink-0">You</span>}
+                                                    </div>
+                                                    <div className="text-xs font-mono text-textSec/60 mt-0.5 truncate">
+                                                        UID: {u.id.substring(0, 12)}...
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                                    <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
-                                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--success)' }}></div>
-                                            Active
-                                        </div>
-                                    </div>
+                                            {/* Mobile: Role & Status combined, Desktop: split */}
+                                            <div className="col-span-2 md:col-span-1 hidden md:flex items-center">
+                                                <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border flex items-center gap-1.5 w-fit ${isAdmin
+                                                    ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[inset_0_0_10px_rgba(168,85,247,0.1)]'
+                                                    : 'bg-white/5 text-textSec border-white/10'
+                                                    }`}>
+                                                    {isAdmin && <Shield size={12} />}
+                                                    {u.role.toUpperCase()}
+                                                </span>
+                                            </div>
 
-                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                                        {actionLoading === u.id ? (
-                                            <Loader2 size={18} className="animate-spin" style={{ opacity: 0.5 }} />
-                                        ) : (
-                                            <>
-                                                <button
-                                                    onClick={() => handleRoleToggle(u.id, u.role)}
-                                                    title={u.role === 'ADMIN' ? 'Demote to User' : 'Promote to Admin'}
-                                                    style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', padding: '6px', borderRadius: '6px', transition: '0.2s' }}
-                                                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
-                                                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                                                    disabled={u.id === currentUser?.id}
-                                                >
-                                                    <Shield size={18} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDeleteUser(u.id, u.email)}
-                                                    title="Delete User"
-                                                    style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', padding: '6px', borderRadius: '6px', transition: '0.2s' }}
-                                                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255, 77, 77, 0.1)')}
-                                                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                                                    disabled={u.id === currentUser?.id}
-                                                >
-                                                    <Trash2 size={18} />
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            ))
+                                            <div className="hidden md:flex items-center">
+                                                <div className="flex items-center gap-2 text-[0.85rem] font-medium text-textSec">
+                                                    <div className="w-2 h-2 rounded-full bg-success drop-shadow-[0_0_5px_rgba(16,185,129,0.8)] animate-pulse"></div>
+                                                    Active
+                                                </div>
+                                            </div>
+
+                                            {/* Mobile merged info */}
+                                            <div className="md:hidden flex flex-col items-start justify-center gap-1">
+                                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${isAdmin ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-white/5 text-textSec border-white/10'}`}>
+                                                    {u.role.substring(0, 3).toUpperCase()}
+                                                </span>
+                                            </div>
+
+                                            <div className="flex justify-end gap-2 text-right">
+                                                {actionLoading === u.id ? (
+                                                    <Loader2 size={20} className="animate-spin text-textSec opacity-50" />
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            onClick={() => handleRoleToggle(u.id, u.role)}
+                                                            title={isAdmin ? 'Demote to User' : 'Promote to Admin'}
+                                                            disabled={isMe}
+                                                            className={`p-2 rounded-lg transition-all duration-300 ${isMe
+                                                                ? 'opacity-30 cursor-not-allowed text-textSec'
+                                                                : 'text-textSec hover:text-white bg-transparent hover:bg-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]'
+                                                                }`}
+                                                        >
+                                                            <Shield size={18} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDeleteUser(u.id, u.email)}
+                                                            title="Delete User"
+                                                            disabled={isMe}
+                                                            className={`p-2 rounded-lg transition-all duration-300 ${isMe
+                                                                ? 'opacity-30 cursor-not-allowed text-textSec'
+                                                                : 'text-textSec hover:text-danger bg-transparent hover:bg-danger/10 hover:shadow-[0_0_15px_rgba(244,63,94,0.15)]'
+                                                                }`}
+                                                        >
+                                                            <Trash2 size={18} />
+                                                        </button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                            </AnimatePresence>
                         )}
                     </div>
                 </div>
 
-                <div style={{ marginTop: '32px', display: 'flex', gap: '16px' }}>
-                    <div className="glass-panel" style={{ flex: 1, padding: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <Shield size={24} color="var(--accent-glow)" />
-                        <div>
-                            <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>Administrative Shield</div>
-                            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Admins can manage documents and system-wide roles.</div>
+                {/* Info Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="glass-panel p-6 rounded-2xl flex items-start gap-4 border border-white/10 bg-black/20"
+                    >
+                        <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl shrink-0">
+                            <Shield size={24} className="text-purple-400 drop-shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
                         </div>
-                    </div>
-                    <div className="glass-panel" style={{ flex: 1, padding: '24px', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                        <AlertCircle size={24} color="var(--danger)" />
                         <div>
-                            <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>Safety First</div>
-                            <div style={{ fontSize: '0.8rem', opacity: 0.7 }}>Self-deletion and role demotion are blocked for your safety.</div>
+                            <div className="text-[0.95rem] font-bold text-white mb-1">Administrative Shield</div>
+                            <div className="text-sm text-textSec font-medium leading-relaxed">Admins bypass standard RLS policies, having full visibility over knowledge bases and system health.</div>
                         </div>
-                    </div>
+                    </motion.div>
+                    <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                        className="glass-panel p-6 rounded-2xl flex items-start gap-4 border border-white/10 bg-black/20"
+                    >
+                        <div className="p-3 bg-danger/10 border border-danger/20 rounded-xl shrink-0">
+                            <AlertCircle size={24} className="text-danger drop-shadow-[0_0_10px_rgba(244,63,94,0.5)]" />
+                        </div>
+                        <div>
+                            <div className="text-[0.95rem] font-bold text-white mb-1">Safety Protocols Enforced</div>
+                            <div className="text-sm text-textSec font-medium leading-relaxed">Self-deletion and role demotion are strictly blocked at the application level to prevent accidental lockouts.</div>
+                        </div>
+                    </motion.div>
                 </div>
             </div>
         </div>

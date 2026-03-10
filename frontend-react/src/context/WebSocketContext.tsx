@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
 interface WebSocketMessage {
@@ -40,7 +40,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const reconnectTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(null);
     const manualDisconnect = useRef(false);
 
-    const connectToRoom = (roomId: string) => {
+    const connectToRoom = useCallback((roomId: string) => {
         if (!token) return;
 
         if (reconnectTimeoutId.current) {
@@ -141,9 +141,9 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 console.error("Failed to parse websocket message", err);
             }
         };
-    };
+    }, [token]);
 
-    const disconnect = () => {
+    const disconnect = useCallback(() => {
         manualDisconnect.current = true;
         if (reconnectTimeoutId.current) {
             clearTimeout(reconnectTimeoutId.current);
@@ -157,19 +157,19 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setMessages([]);
         activeAiMessageId.current = null;
         reconnectCount.current = 0;
-    };
+    }, []);
 
-    const sendMessage = (prompt: string, provider: string) => {
+    const sendMessage = useCallback((prompt: string, provider: string) => {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
             ws.current.send(JSON.stringify({ prompt, provider }));
         } else {
             setError("Cannot send message: WebSocket is disconnected.");
         }
-    };
+    }, []);
 
-    const setInitialHistory = (history: ChatMessage[]) => {
+    const setInitialHistory = useCallback((history: ChatMessage[]) => {
         setMessages(history);
-    }
+    }, []);
 
     // Cleanup on unmount
     useEffect(() => {

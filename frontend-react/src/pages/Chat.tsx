@@ -21,9 +21,11 @@ import { useWebSocket } from '../context/WebSocketContext';
 import { useAuth } from '../context/AuthContext';
 
 interface Message {
-    role: 'user' | 'ai';
+    role: 'user' | 'ai' | 'system';
     content: string;
     sources?: any[];
+    id?: string;
+    sender?: string;
 }
 
 const Chat: React.FC = () => {
@@ -68,9 +70,9 @@ const Chat: React.FC = () => {
     const [roomDocuments, setRoomDocuments] = useState<any[]>([]);
     const [addingDoc, setAddingDoc] = useState<string | null>(null);
 
-    // Create Room Modal State
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [newRoomName, setNewRoomName] = useState('');
+    const [activeRoomName, setActiveRoomName] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -108,8 +110,13 @@ const Chat: React.FC = () => {
                 // Fetch historic persistence from Neon DB
                 const res = await roomService.getHistory(roomId);
                 if (isMounted) setInitialHistory(res.data.messages);
+
+                // Fetch room name from user rooms
+                const roomsRes = await roomService.getUserRooms();
+                const roomInfo = roomsRes.data.rooms.find((r: any) => r.id === roomId);
+                if (isMounted && roomInfo) setActiveRoomName(roomInfo.name);
             } catch (err) {
-                console.error("Failed to load room history", err);
+                console.error("Failed to load room data", err);
             } finally {
                 if (isMounted) {
                     setLoading(false);
@@ -125,7 +132,7 @@ const Chat: React.FC = () => {
             isMounted = false;
             disconnect();
         };
-    }, [roomId]);
+    }, [roomId, connectToRoom, disconnect, setInitialHistory]);
 
     const handleClearChat = () => {
         if (isMultiplayer) return; // Cannot clear server history from here
@@ -146,6 +153,7 @@ const Chat: React.FC = () => {
         const finalName = newRoomName.trim() || 'My Collaboration Room';
         try {
             const res = await roomService.createRoom("", finalName);
+            window.dispatchEvent(new Event('rooms-updated'));
             setSearchParams({ room: res.data.room_id });
             setShowRoomModal(false);
         } catch (err) {
@@ -230,7 +238,7 @@ const Chat: React.FC = () => {
                 { role: 'user', content: question },
                 { role: 'assistant', content: data.answer }
             ]);
-        } catch (err) {
+        } catch {
             setLocalMessages(prev => [...prev, {
                 role: 'ai',
                 content: "⚠️ Error contacting the intelligence engine. Please check your connection or API keys."
@@ -241,38 +249,33 @@ const Chat: React.FC = () => {
     };
 
     return (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', padding: '20px' }}>
-            <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="flex-1 flex flex-row h-screen p-4 lg:p-6 overflow-hidden max-w-full">
+            <div className="glass-panel flex-1 flex flex-col h-full overflow-hidden shadow-2xl relative z-10 w-full">
                 {/* Chat Header */}
-                <div style={{
-                    padding: '20px 24px', borderBottom: '1px solid var(--panel-border)',
-                    display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 10px var(--success)' }}></div>
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: '600' }}>Nexus Intelligence</h3>
+                <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-black/20 backdrop-blur-md z-20 shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="w-2.5 h-2.5 rounded-full bg-success shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse"></div>
+                        <h3 className="text-lg font-outfit font-semibold flex items-center gap-2 text-white">
+                            Nexus Intelligence
+                            {isMultiplayer && activeRoomName && (
+                                <>
+                                    <ChevronRight size={16} className="text-textSec" />
+                                    <span className="text-accentGlow font-bold decoration-accentGlow/30 underline decoration-2 underline-offset-4">{activeRoomName}</span>
+                                </>
+                            )}
+                        </h3>
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '12px', border: '1px solid var(--panel-border)' }}>
+                    <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 shadow-inner">
                         <button
                             onClick={() => setProvider('openai')}
-                            style={{
-                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '600',
-                                background: provider === 'openai' ? 'var(--accent-gradient)' : 'transparent',
-                                color: provider === 'openai' ? '#fff' : 'var(--text-secondary)',
-                                border: 'none', cursor: 'pointer', transition: 'all 0.2s'
-                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${provider === 'openai' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-white hover:bg-white/5'}`}
                         >
                             OPENAI
                         </button>
                         <button
                             onClick={() => setProvider('gemini')}
-                            style={{
-                                padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '600',
-                                background: provider === 'gemini' ? 'var(--accent-gradient)' : 'transparent',
-                                color: provider === 'gemini' ? '#fff' : 'var(--text-secondary)',
-                                border: 'none', cursor: 'pointer', transition: 'all 0.2s', marginRight: '8px'
-                            }}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${provider === 'gemini' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-white hover:bg-white/5'} mr-1`}
                         >
                             GEMINI
                         </button>
@@ -280,12 +283,7 @@ const Chat: React.FC = () => {
                         {!isMultiplayer && (
                             <button
                                 onClick={handleOpenRoomModal}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                    padding: '6px 12px', borderRadius: '8px', fontSize: '0.75rem', fontWeight: '600',
-                                    background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa',
-                                    border: '1px solid rgba(59, 130, 246, 0.3)', cursor: 'pointer', transition: 'all 0.2s'
-                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accentSec/10 text-accentSec border border-accentSec/20 hover:bg-accentSec/20 hover:border-accentSec/40 transition-all duration-300 ml-1"
                             >
                                 <Users size={14} /> Invite Friends
                             </button>
@@ -295,14 +293,9 @@ const Chat: React.FC = () => {
                             <button
                                 onClick={handleClearChat}
                                 title="Clear Chat"
-                                style={{
-                                    background: 'transparent', border: 'none', color: 'var(--text-secondary)',
-                                    cursor: 'pointer', padding: '6px', borderRadius: '8px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    transition: 'var(--transition-bounce)'
-                                }}
+                                className="text-textSec hover:text-danger p-2 rounded-lg hover:bg-danger/10 transition-colors ml-1"
                             >
-                                <Trash2 size={18} />
+                                <Trash2 size={16} />
                             </button>
                         )}
                     </div>
@@ -310,39 +303,26 @@ const Chat: React.FC = () => {
 
                 {/* Multiplayer Status Banner */}
                 {isMultiplayer && (
-                    <div style={{
-                        background: 'rgba(59, 130, 246, 0.1)', borderBottom: '1px solid rgba(59, 130, 246, 0.2)',
-                        padding: '10px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#60a5fa', fontSize: '0.85rem' }}>
-                            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: isConnected ? '#10b981' : '#f43f5e', boxShadow: isConnected ? '0 0 10px rgba(16,185,129,0.5)' : '' }}></div>
-                            <span style={{ fontWeight: '500' }}>Collaborative Session {isConnected ? '(Live)' : '(Connecting...)'}</span>
-                            {wsError && <span style={{ color: '#f43f5e', marginLeft: '10px' }}>{wsError}</span>}
+                    <div className="bg-accentSec/5 border-b border-accentSec/10 px-6 py-2.5 flex justify-between items-center backdrop-blur-sm z-10 shrink-0">
+                        <div className={`flex items-center gap-2 text-sm font-medium ${isConnected ? 'text-success' : 'text-danger'}`}>
+                            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-danger shadow-[0_0_8px_rgba(244,63,94,0.8)]'} animate-pulse`}></div>
+                            <span>Collaborative Session {isConnected ? '(Live)' : '(Connecting...)'}</span>
+                            {wsError && <span className="text-danger ml-2">{wsError}</span>}
                         </div>
-                        <div style={{ display: 'flex', gap: '8px' }}>
+                        <div className="flex gap-2">
                             <button
                                 onClick={handleCopyLink}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px',
-                                    background: 'rgba(59, 130, 246, 0.2)', color: '#60a5fa', borderRadius: '6px',
-                                    fontSize: '0.8rem', fontWeight: '500', border: '1px solid rgba(59, 130, 246, 0.3)',
-                                    cursor: 'pointer'
-                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-accentSec/10 text-accentSec rounded-lg text-xs font-bold border border-accentSec/20 hover:bg-accentSec/20 transition-all"
                             >
-                                {copied ? <CheckCircle2 size={14} color="#34d399" /> : <Copy size={14} />}
-                                {copied ? 'Copied' : 'Invite'}
+                                {copied ? <CheckCircle2 size={14} className="text-success" /> : <Copy size={14} />}
+                                {copied ? 'Copied URL' : 'Invite'}
                             </button>
                             <button
                                 onClick={() => {
                                     setShowVault(!showVault);
                                     if (!showVault) fetchVaultData();
                                 }}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px',
-                                    background: showVault ? 'rgba(168, 85, 247, 0.2)' : 'rgba(168, 85, 247, 0.1)', color: '#c084fc', borderRadius: '6px',
-                                    fontSize: '0.8rem', fontWeight: '500', border: '1px solid rgba(168, 85, 247, 0.3)',
-                                    cursor: 'pointer'
-                                }}
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${showVault ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20'}`}
                             >
                                 <FileBox size={14} /> Shared Vault
                             </button>
@@ -357,13 +337,8 @@ const Chat: React.FC = () => {
                                     }
                                     setSearchParams({});
                                     window.dispatchEvent(new Event('rooms-updated'));
-                                }} // Exit room
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px',
-                                    background: 'rgba(244, 63, 94, 0.1)', color: '#fb7185', borderRadius: '6px',
-                                    fontSize: '0.8rem', fontWeight: '500', border: '1px solid rgba(244, 63, 94, 0.2)',
-                                    cursor: 'pointer'
                                 }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 bg-danger/10 text-danger rounded-lg text-xs font-bold border border-danger/20 hover:bg-danger/20 transition-all"
                             >
                                 Leave
                             </button>
@@ -372,10 +347,9 @@ const Chat: React.FC = () => {
                 )}
 
                 {/* Messages Container */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 lg:px-12 flex flex-col gap-6 custom-scrollbar relative z-0">
                     <AnimatePresence initial={false}>
                         {displayMessages.map((msg, i) => {
-                            // Unified mappings for local vs WS formats
                             const isUser = msg.role === 'user';
                             const isSystem = msg.role === 'system';
                             const content = msg.content;
@@ -386,10 +360,10 @@ const Chat: React.FC = () => {
                             if (isSystem) {
                                 return (
                                     <motion.div key={msg.id || i}
-                                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                        style={{ display: 'flex', justifyContent: 'center', width: '100%' }}
+                                        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                                        className="flex justify-center w-full my-2"
                                     >
-                                        <div style={{ background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '20px', fontSize: '0.8rem', color: '#9ca3af', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                        <div className="bg-white/5 backdrop-blur-sm px-4 py-1.5 rounded-full text-xs font-medium text-textSec border border-white/10 shadow-sm">
                                             {content}
                                         </div>
                                     </motion.div>
@@ -399,64 +373,47 @@ const Chat: React.FC = () => {
                             return (
                                 <motion.div
                                     key={msg.id || i}
-                                    initial={{ opacity: 0, y: 10 }}
+                                    initial={{ opacity: 0, y: 15 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    style={{
-                                        display: 'flex', gap: '16px', flexDirection: 'column',
-                                        maxWidth: '85%', alignSelf: isRightSide ? 'flex-end' : 'flex-start',
-                                    }}
+                                    className={`flex flex-col gap-2 max-w-[85%] lg:max-w-[75%] ${isRightSide ? 'self-end' : 'self-start'}`}
                                 >
                                     {isMultiplayer && (
-                                        <div style={{
-                                            color: isUser ? (isMe ? '#60a5fa' : '#818cf8') : '#34d399',
-                                            fontWeight: '600', fontSize: '0.8rem', paddingLeft: '4px',
-                                            alignSelf: isRightSide ? 'flex-end' : 'flex-start'
-                                        }}>
+                                        <div className={`text-xs font-bold px-1 ${isRightSide ? 'self-end' : 'self-start'} ${isUser ? (isMe ? 'text-accentSec' : 'text-purple-400') : 'text-accentGlow'}`}>
                                             {senderName}
                                         </div>
                                     )}
 
-                                    <div style={{ display: 'flex', gap: '16px', flexDirection: isRightSide ? 'row-reverse' : 'row' }}>
-                                        <div style={{
-                                            width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            background: !isUser ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255,255,255,0.1)',
-                                            border: `1px solid ${!isUser ? 'rgba(0, 240, 255, 0.3)' : 'var(--panel-border)'} `
-                                        }}>
-                                            {!isUser ? <Sparkles size={18} color="var(--accent-glow)" /> : <UserIcon size={18} />}
+                                    <div className={`flex gap-3 md:gap-4 ${isRightSide ? 'flex-row-reverse' : 'flex-row'}`}>
+                                        <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center shadow-md ${!isUser ? 'bg-accentGlow/10 border border-accentGlow/30' : 'bg-white/5 border border-white/10'}`}>
+                                            {!isUser ? <Sparkles size={20} className="text-accentGlow drop-shadow-glow" /> : <UserIcon size={20} className="text-white/80" />}
                                         </div>
 
-                                        <div style={{
-                                            background: isRightSide ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.03)',
-                                            padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid',
-                                            borderColor: isRightSide ? 'rgba(59, 130, 246, 0.4)' : 'var(--panel-border)'
-                                        }}>
-                                            <div className="markdown-content" style={{ fontSize: '0.95rem', color: '#fff' }}>
+                                        <div className={`group relative p-5 rounded-2xl border ${isRightSide ? 'bg-accentSec/10 border-accentSec/30 rounded-tr-sm backdrop-blur-md' : 'bg-black/40 border-white/10 rounded-tl-sm backdrop-blur-md hover:border-white/20 transition-colors'}`}>
+                                            <div className="markdown-content text-[0.95rem] text-white/90 leading-relaxed">
                                                 <ReactMarkdown>{msg.content}</ReactMarkdown>
                                             </div>
 
                                             {msg.sources && msg.sources.length > 0 && (
-                                                <details style={{ marginTop: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '12px' }}>
-                                                    <summary style={{
-                                                        listStyle: 'none', cursor: 'pointer', fontSize: '0.8rem',
-                                                        color: 'var(--accent-glow)', fontWeight: '600', display: 'flex',
-                                                        alignItems: 'center', gap: '8px'
-                                                    }}>
-                                                        <ChevronRight size={14} className="details-chevron" /> SOURCES CITED
+                                                <details className="mt-5 border-t border-white/10 pt-4 cursor-pointer group/details">
+                                                    <summary className="list-none text-xs text-accentGlow font-bold flex items-center gap-2 uppercase tracking-wider select-none hover:text-accentGlow/80 transition-colors">
+                                                        <ChevronRight size={14} className="transition-transform group-open/details:rotate-90" />
+                                                        Sources Cited ({msg.sources.length})
                                                     </summary>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
+                                                    <div className="flex flex-col gap-3 mt-4">
                                                         {msg.sources.map((src: any, j: number) => (
-                                                            <div key={j} style={{
-                                                                background: 'rgba(0,0,0,0.3)', padding: '12px', borderLeft: '3px solid var(--accent-glow)',
-                                                                borderRadius: 'var(--radius-sm)', fontSize: '0.85rem'
-                                                            }}>
-                                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                                                                    <strong style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                                        <FileText size={14} /> {src.filename}
+                                                            <div key={j} className="bg-black/50 p-3.5 border-l-2 border-accentGlow rounded-r-lg text-sm border-t border-b border-r border-white/5 hover:bg-black/70 transition-colors">
+                                                                <div className="flex justify-between items-center mb-2">
+                                                                    <strong className="flex items-center gap-2 text-white/80 shrink-0 min-w-0 pr-2">
+                                                                        <FileText size={14} className="shrink-0 text-textSec" />
+                                                                        <span className="truncate">{src.filename}</span>
                                                                     </strong>
-                                                                    <span style={{ opacity: 0.7 }}>{Math.round(src.relevance_score * 100)}% Match</span>
+                                                                    <span className="text-xs font-semibold px-2 py-0.5 bg-accentGlow/10 text-accentGlow rounded-md shrink-0">
+                                                                        {Math.round(src.relevance_score * 100)}% Match
+                                                                    </span>
                                                                 </div>
-                                                                <div style={{ opacity: 0.8, fontStyle: 'italic', fontSize: '0.8rem' }}>"{src.chunk_excerpt}"</div>
+                                                                <div className="text-textSec/90 italic text-[0.85rem] leading-relaxed border-t border-white/5 pt-2 mt-1">
+                                                                    "{src.chunk_excerpt}"
+                                                                </div>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -468,56 +425,46 @@ const Chat: React.FC = () => {
                             )
                         })}
                     </AnimatePresence>
+
                     {loading && (
-                        <div style={{ display: 'flex', gap: '16px', maxWidth: '85%' }}>
-                            <div style={{
-                                width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: 'rgba(0, 240, 255, 0.1)', border: '1px solid rgba(0, 240, 255, 0.3)'
-                            }}>
-                                <Loader2 size={18} color="var(--accent-glow)" className="animate-spin" />
+                        <div className="flex gap-4 max-w-[85%] self-start mt-2">
+                            <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center bg-accentGlow/10 border border-accentGlow/30 shadow-glow">
+                                <Loader2 size={20} className="text-accentGlow animate-spin" />
                             </div>
-                            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--panel-border)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Agent is researching...</span>
+                            <div className="bg-black/40 p-4 rounded-2xl rounded-tl-sm border border-white/10 flex items-center gap-3 backdrop-blur-md">
+                                <span className="text-sm font-medium text-textSec animate-pulse">Agent is researching knowledge base...</span>
                             </div>
                         </div>
                     )}
-                    <div ref={messagesEndRef} />
+                    <div ref={messagesEndRef} className="h-4 shrink-0" />
                 </div>
 
                 {/* Chat Input Area */}
-                <div style={{ padding: '24px', borderTop: '1px solid var(--panel-border)' }}>
-                    <form onSubmit={handleSend} style={{ display: 'flex', gap: '12px', alignItems: 'flex-end' }}>
-                        <textarea
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSend(e);
-                                }
-                            }}
-                            disabled={isMultiplayer && !isConnected}
-                            placeholder={isMultiplayer && !isConnected ? "Connecting to multiplayer room..." : isMultiplayer ? "Type @ai to ask the Agent... or just chat here" : "Query the knowledge base... (Shift+Enter for newline)"}
-                            style={{
-                                flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid var(--panel-border)',
-                                borderRadius: 'var(--radius-md)', padding: '16px', color: '#fff',
-                                resize: 'none', height: '56px', maxHeight: '200px', fontSize: '0.95rem',
-                                opacity: (isMultiplayer && !isConnected) ? 0.5 : 1
-                            }}
-                        />
-                        <button
-                            type="submit"
-                            disabled={loading || !input.trim() || (isMultiplayer && !isConnected)}
-                            style={{
-                                width: '56px', height: '56px', borderRadius: '16px',
-                                border: 'none', background: 'var(--accent-gradient)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                cursor: 'pointer', transition: 'var(--transition-bounce)'
-                            }}
-                        >
-                            <Send size={24} color="#fff" />
-                        </button>
+                <div className="p-4 md:p-6 border-t border-white/10 bg-black/20 backdrop-blur-xl shrink-0 z-20">
+                    <form onSubmit={handleSend} className="max-w-[1000px] mx-auto relative group">
+                        <div className="absolute -inset-1 bg-accent-gradient rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="relative flex gap-3 items-end bg-black rounded-xl p-2 border border-white/10 focus-within:border-accentGlow/50 transition-colors shadow-lg">
+                            <textarea
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSend(e);
+                                    }
+                                }}
+                                disabled={isMultiplayer && !isConnected}
+                                placeholder={isMultiplayer && !isConnected ? "Connecting to multiplayer room..." : isMultiplayer ? "Type @ai to ask the Agent... or just chat here" : "Query the knowledge base... (Shift+Enter for newline)"}
+                                className="flex-1 bg-transparent border-none text-white p-3 resize-none h-14 max-h-[200px] text-[0.95rem] outline-none placeholder:text-textSec/50 custom-scrollbar disabled:opacity-50"
+                            />
+                            <button
+                                type="submit"
+                                disabled={loading || !input.trim() || (isMultiplayer && !isConnected)}
+                                className="w-12 h-12 shrink-0 rounded-lg bg-accent-gradient flex items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-glow disabled:opacity-50 disabled:hover:shadow-none disabled:cursor-not-allowed shrink-0"
+                            >
+                                <Send size={20} className="text-white ml-0.5" />
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -527,48 +474,45 @@ const Chat: React.FC = () => {
                 {isMultiplayer && showVault && (
                     <motion.div
                         initial={{ width: 0, opacity: 0, marginLeft: 0 }}
-                        animate={{ width: 320, opacity: 1, marginLeft: 20 }}
+                        animate={{ width: 340, opacity: 1, marginLeft: 24 }}
                         exit={{ width: 0, opacity: 0, marginLeft: 0 }}
-                        className="glass-panel"
-                        style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+                        className="glass-panel flex flex-col overflow-hidden shadow-2xl z-20 shrink-0 h-full border-l border-white/10 relative"
                     >
-                        <div style={{ padding: '20px', borderBottom: '1px solid var(--panel-border)', background: 'rgba(0,0,0,0.2)' }}>
-                            <h3 style={{ fontSize: '1rem', fontWeight: '600', color: '#c084fc', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <FileBox size={18} /> Shared Vault
+                        <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/10 rounded-full blur-[60px] -z-10 pointer-events-none"></div>
+
+                        <div className="p-5 border-b border-white/10 bg-black/20 backdrop-blur-md">
+                            <h3 className="text-lg font-outfit font-bold text-purple-400 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]">
+                                <FileBox size={20} /> Shared Vault
                             </h3>
-                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                Add documents from your Knowledge Base to the Room Brain.
+                            <p className="text-xs text-textSec mt-1.5 leading-relaxed font-medium">
+                                Select documents from your Knowledge Base to make them accessible to everyone in this room.
                             </p>
                         </div>
-                        <div style={{ padding: '20px', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 custom-scrollbar relative z-10">
                             {myDocuments.length === 0 ? (
-                                <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '40px' }}>
-                                    Your Knowledge Base is empty. Go upload some files first.
+                                <div className="text-center text-textSec text-sm mt-10 p-6 border border-white/5 rounded-2xl bg-black/20 flex flex-col items-center">
+                                    <FileText size={32} className="mb-3 opacity-30" />
+                                    Your personal Knowledge Base is empty. Upload files in the Knowledge Base tab first.
                                 </div>
                             ) : (
                                 myDocuments.map(doc => {
                                     const isAdded = roomDocuments.some(rd => rd.document_id === doc.document_id);
                                     return (
-                                        <div key={doc.document_id} style={{
-                                            background: 'rgba(255,255,255,0.03)', padding: '12px', borderRadius: '8px',
-                                            border: '1px solid var(--panel-border)', display: 'flex', flexDirection: 'column', gap: '8px'
-                                        }}>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: '500', color: '#fff', wordBreak: 'break-all' }}>
-                                                {doc.filename}
+                                        <div key={doc.document_id} className={`p-4 rounded-xl border transition-all duration-300 flex flex-col gap-3 ${isAdded ? 'bg-purple-500/10 border-purple-500/30' : 'bg-black/30 border-white/5 hover:border-white/20'}`}>
+                                            <div className="text-sm font-semibold text-white/90 break-words leading-tight flex items-start gap-2">
+                                                <FileText size={16} className={`shrink-0 mt-0.5 ${isAdded ? 'text-purple-400' : 'text-textSec'}`} />
+                                                <span>{doc.filename}</span>
                                             </div>
                                             <button
                                                 onClick={() => handleShareDocument(doc.document_id)}
                                                 disabled={addingDoc === doc.document_id || isAdded}
-                                                style={{
-                                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                                                    background: (isAdded || addingDoc === doc.document_id) ? 'var(--success)' : 'rgba(168, 85, 247, 0.2)',
-                                                    color: (isAdded || addingDoc === doc.document_id) ? '#fff' : '#c084fc',
-                                                    border: 'none', padding: '6px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '600',
-                                                    cursor: (isAdded || addingDoc === doc.document_id) ? 'default' : 'pointer', transition: 'all 0.2s'
-                                                }}
+                                                className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${isAdded || addingDoc === doc.document_id
+                                                    ? 'bg-success/20 text-success border border-success/30 cursor-default shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]'
+                                                    : 'bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 hover:border-purple-500/40 cursor-pointer shadow-[inset_0_0_10px_rgba(168,85,247,0.05)]'
+                                                    }`}
                                             >
-                                                {(isAdded || addingDoc === doc.document_id) ? <CheckCircle2 size={14} /> : <PlusCircle size={14} />}
-                                                {addingDoc === doc.document_id ? 'Adding...' : (isAdded ? 'In Room' : 'Add to Room')}
+                                                {(isAdded || addingDoc === doc.document_id) ? <CheckCircle2 size={16} /> : <PlusCircle size={16} />}
+                                                {addingDoc === doc.document_id ? 'Adding...' : (isAdded ? 'Shared in Room' : 'Add to Room Vault')}
                                             </button>
                                         </div>
                                     )
@@ -582,54 +526,45 @@ const Chat: React.FC = () => {
             {/* Create Room Modal */}
             <AnimatePresence>
                 {showRoomModal && (
-                    <div style={{
-                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-                        background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
-                    }}>
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[1000] p-4">
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.95, opacity: 0 }}
-                            className="glass-panel"
-                            style={{ padding: '30px', width: '400px', display: 'flex', flexDirection: 'column', gap: '20px' }}
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="glass-panel w-full max-w-[420px] p-8 flex flex-col gap-6 relative overflow-hidden shadow-2xl"
                         >
-                            <h3 style={{ fontSize: '1.2rem', fontWeight: '600', color: '#fff', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <Users size={20} color="#60a5fa" /> Create Collaboration Room
+                            <div className="absolute top-0 right-0 w-48 h-48 bg-accentSec/10 rounded-full blur-[50px] -z-10"></div>
+
+                            <h3 className="text-2xl font-outfit font-bold text-white flex items-center gap-3">
+                                <Users size={28} className="text-accentSec drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                                Create Room
                             </h3>
-                            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                                Give your team's workspace a name. You can invite friends and share documents once inside.
+                            <p className="text-sm font-medium text-textSec/90 leading-relaxed -mt-2">
+                                Give your team's workspace a name. You can invite friends and collaborate on shared documents once inside.
                             </p>
-                            <form onSubmit={handleCreateGlobalRoom} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                                <input
-                                    autoFocus
-                                    type="text"
-                                    placeholder="e.g. Project Phoenix, Q3 Legal Review..."
-                                    value={newRoomName}
-                                    onChange={(e) => setNewRoomName(e.target.value)}
-                                    style={{
-                                        background: 'rgba(0,0,0,0.4)', border: '1px solid var(--panel-border)',
-                                        padding: '12px 16px', borderRadius: '8px', color: '#fff', fontSize: '0.95rem'
-                                    }}
-                                />
-                                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                            <form onSubmit={handleCreateGlobalRoom} className="flex flex-col gap-6 relative z-10">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-textSec uppercase tracking-wider pl-1">Workspace Name</label>
+                                    <input
+                                        autoFocus
+                                        type="text"
+                                        placeholder="e.g. Project Phoenix"
+                                        value={newRoomName}
+                                        onChange={(e) => setNewRoomName(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 px-4 py-3.5 rounded-xl text-white text-[0.95rem] outline-none focus:border-accentSec/50 focus:ring-4 focus:ring-accentSec/10 transition-all placeholder:text-white/20"
+                                    />
+                                </div>
+                                <div className="flex gap-3 justify-end pt-2 border-t border-white/10 mt-2">
                                     <button
                                         type="button"
                                         onClick={() => setShowRoomModal(false)}
-                                        style={{
-                                            padding: '10px 16px', borderRadius: '8px', background: 'transparent',
-                                            border: '1px solid var(--panel-border)', color: 'var(--text-secondary)', cursor: 'pointer'
-                                        }}
+                                        className="px-5 py-2.5 rounded-xl bg-transparent border border-white/10 text-textSec hover:text-white hover:bg-white/5 font-semibold text-sm transition-colors"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         type="submit"
-                                        style={{
-                                            padding: '10px 16px', borderRadius: '8px', background: 'var(--accent-gradient)',
-                                            border: 'none', color: '#fff', fontWeight: '600', cursor: 'pointer',
-                                            boxShadow: '0 4px 15px rgba(59, 130, 246, 0.4)'
-                                        }}
+                                        className="px-6 py-2.5 rounded-xl bg-accentSec text-white font-bold text-sm shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all"
                                     >
                                         Create Room
                                     </button>
