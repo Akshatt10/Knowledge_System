@@ -29,7 +29,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
     });
 
-    // Handle token changes (logout/login)
     useEffect(() => {
         if (!token) {
             setUser(null);
@@ -41,7 +40,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('role', role);
         localStorage.setItem('email', email);
 
-        // Clear any lingering session chat data from a previous user
         sessionStorage.clear();
 
         setToken(newToken);
@@ -53,7 +51,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.removeItem('role');
         localStorage.removeItem('email');
 
-        // Ensure no chat history is left behind when logging out
         sessionStorage.clear();
 
         setToken(null);

@@ -14,7 +14,6 @@ const Login: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [showWelcome, setShowWelcome] = useState(false);
 
-    // Pending auth data to apply after the user dismisses the welcome modal
     const [pendingAuth, setPendingAuth] = useState<{ token: string; role: string; email: string } | null>(null);
 
     const { login: setAuth } = useAuth();
@@ -56,7 +55,6 @@ const Login: React.FC = () => {
                 navigate(destination, { replace: true });
             } else {
                 const res = await authService.register({ email, password });
-                // Don't navigate yet — show welcome modal first
                 setPendingAuth({ token: res.data.access_token, role: res.data.role, email });
                 setShowWelcome(true);
             }
@@ -65,7 +63,6 @@ const Login: React.FC = () => {
             if (typeof detail === 'string') {
                 setError(detail);
             } else if (Array.isArray(detail)) {
-                // FastAPI validation errors come as an array
                 setError(detail.map((d: any) => d.msg).join('. '));
             } else {
                 setError('Authentication failed. Please check your credentials.');

@@ -123,10 +123,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                         const existingMsgIndex = newMessages.findIndex(m => m.id === data.id);
 
                         if (existingMsgIndex >= 0) {
-                            // Update existing stream
                             newMessages[existingMsgIndex].content = data.content;
                         } else if (data.status === 'start' || data.content) {
-                            // Create new stream
                             newMessages.push({
                                 id: data.id!,
                                 role: 'assistant',
@@ -171,7 +169,6 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setMessages(history);
     }, []);
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => disconnect();
     }, []);

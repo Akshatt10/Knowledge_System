@@ -32,10 +32,8 @@ const Chat: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const roomId = searchParams.get('room');
 
-    // Auth context (used for mapping our own username in multiplayer)
     const { user } = useAuth();
 
-    // WebSocket Context hook
     const {
         connectToRoom,
         disconnect,
@@ -46,7 +44,6 @@ const Chat: React.FC = () => {
         setInitialHistory
     } = useWebSocket();
 
-    // --- LOCAL STATE (Single Player Mode) ---
     const [localMessages, setLocalMessages] = useState<Message[]>(() => {
         const saved = sessionStorage.getItem('chat_messages');
         return saved ? JSON.parse(saved) : [
@@ -64,7 +61,6 @@ const Chat: React.FC = () => {
     });
     const [copied, setCopied] = useState(false);
 
-    // Document Vault State
     const [showVault, setShowVault] = useState(false);
     const [myDocuments, setMyDocuments] = useState<any[]>([]);
     const [roomDocuments, setRoomDocuments] = useState<any[]>([]);
@@ -76,7 +72,6 @@ const Chat: React.FC = () => {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Dynamic resolution based on mode
     const isMultiplayer = !!roomId;
     const displayMessages = isMultiplayer ? wsMessages : localMessages as any[];
 
@@ -86,7 +81,6 @@ const Chat: React.FC = () => {
 
     useEffect(scrollToBottom, [displayMessages]);
 
-    // Local Storage Effects (Only save if NOT in multiplayer)
     useEffect(() => {
         if (!isMultiplayer) {
             sessionStorage.setItem('chat_messages', JSON.stringify(localMessages));
@@ -95,7 +89,6 @@ const Chat: React.FC = () => {
         }
     }, [localMessages, history, provider, isMultiplayer]);
 
-    // WebSocket Mounting Logic
     useEffect(() => {
         let isMounted = true;
 
@@ -107,11 +100,9 @@ const Chat: React.FC = () => {
         const initRoom = async () => {
             setLoading(true);
             try {
-                // Fetch historic persistence from Neon DB
                 const res = await roomService.getHistory(roomId);
                 if (isMounted) setInitialHistory(res.data.messages);
 
-                // Fetch room name from user rooms
                 const roomsRes = await roomService.getUserRooms();
                 const roomInfo = roomsRes.data.rooms.find((r: any) => r.id === roomId);
                 if (isMounted && roomInfo) setActiveRoomName(roomInfo.name);
@@ -120,7 +111,6 @@ const Chat: React.FC = () => {
             } finally {
                 if (isMounted) {
                     setLoading(false);
-                    // Connect to socket stream
                     connectToRoom(roomId);
                 }
             }

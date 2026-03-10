@@ -36,8 +36,6 @@ ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx", ".json"}
 MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 20 MB
 
 
-# ── Background worker ──────────────────────────────────────────────────
-
 def _run_ingestion_job(
     job_id: str,
     file_path: str,
@@ -45,7 +43,6 @@ def _run_ingestion_job(
     file_type: str,
     user_id: str,
 ):
-    """Runs in a background thread. Handles full ingestion + DB commit."""
     db = SessionLocal()
     try:
         job_store.update(job_id, status="processing")
@@ -57,7 +54,6 @@ def _run_ingestion_job(
             user_id=user_id,
         )
 
-        # Save record to Postgres
         db_doc = Document(
             id=result["document_id"],
             user_id=user_id,
@@ -84,14 +80,11 @@ def _run_ingestion_job(
         job_store.update(job_id, status="failed", error=str(exc))
     finally:
         db.close()
-        # Cleanup temp file
         try:
             os.remove(file_path)
         except OSError:
             pass
 
-
-# ── Routes ─────────────────────────────────────────────────────────────
 
 from typing import List
 
