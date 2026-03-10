@@ -47,6 +47,7 @@ const KnowledgeBase: React.FC = () => {
     const handleCreateRoom = async (doc: Document) => {
         try {
             const res = await roomService.createRoom(doc.document_id, `${doc.filename} Room`);
+            window.dispatchEvent(new Event('rooms-updated'));
             navigate(`/chat?room=${res.data.room_id}`);
         } catch (err) {
             console.error("Failed to create room", err);
@@ -192,12 +193,12 @@ const KnowledgeBase: React.FC = () => {
                         )}
                     </div>
 
-                    <div className="glass-panel" style={{ padding: '32px', minHeight: '400px' }}>
+                    <div className="glass-panel" style={{ padding: '32px', minHeight: '400px', maxHeight: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
                         <h3 style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <FileText size={20} color="var(--accent-glow)" /> Knowledge Library
                         </h3>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', overflowY: 'auto', flex: 1, paddingRight: '12px' }}>
                             {documents.length === 0 && !loading ? (
                                 <div style={{ textAlign: 'center', padding: '100px 0', opacity: 0.5 }}>
                                     No documents in library.

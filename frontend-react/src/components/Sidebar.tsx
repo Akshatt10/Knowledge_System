@@ -83,7 +83,7 @@ const Sidebar: React.FC = () => {
                             textTransform: 'uppercase', letterSpacing: '1px',
                             marginBottom: '8px', paddingLeft: '16px'
                         }}>
-                            Shared Spaces
+                            Chat Rooms
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                             {rooms.map(room => (

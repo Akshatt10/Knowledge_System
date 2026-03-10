@@ -68,9 +68,9 @@ const Chat: React.FC = () => {
     const [roomDocuments, setRoomDocuments] = useState<any[]>([]);
     const [addingDoc, setAddingDoc] = useState<string | null>(null);
 
-    // Create Room Modal State
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [newRoomName, setNewRoomName] = useState('');
+    const [activeRoomName, setActiveRoomName] = useState<string | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -108,8 +108,13 @@ const Chat: React.FC = () => {
                 // Fetch historic persistence from Neon DB
                 const res = await roomService.getHistory(roomId);
                 if (isMounted) setInitialHistory(res.data.messages);
+
+                // Fetch room name from user rooms
+                const roomsRes = await roomService.getUserRooms();
+                const roomInfo = roomsRes.data.rooms.find((r: any) => r.id === roomId);
+                if (isMounted && roomInfo) setActiveRoomName(roomInfo.name);
             } catch (err) {
-                console.error("Failed to load room history", err);
+                console.error("Failed to load room data", err);
             } finally {
                 if (isMounted) {
                     setLoading(false);
@@ -146,6 +151,7 @@ const Chat: React.FC = () => {
         const finalName = newRoomName.trim() || 'My Collaboration Room';
         try {
             const res = await roomService.createRoom("", finalName);
+            window.dispatchEvent(new Event('rooms-updated'));
             setSearchParams({ room: res.data.room_id });
             setShowRoomModal(false);
         } catch (err) {
@@ -241,7 +247,7 @@ const Chat: React.FC = () => {
     };
 
     return (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100vh', padding: '20px' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'row', height: '100vh', padding: '20px' }}>
             <div className="glass-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                 {/* Chat Header */}
                 <div style={{
@@ -250,7 +256,15 @@ const Chat: React.FC = () => {
                 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: 'var(--success)', boxShadow: '0 0 10px var(--success)' }}></div>
-                        <h3 style={{ fontSize: '1.2rem', fontWeight: '600' }}>Nexus Intelligence</h3>
+                        <h3 style={{ fontSize: '1.2rem', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            Nexus Intelligence
+                            {isMultiplayer && activeRoomName && (
+                                <>
+                                    <ChevronRight size={16} color="var(--text-secondary)" />
+                                    <span style={{ color: 'var(--accent-glow)', fontSize: '1rem' }}>{activeRoomName}</span>
+                                </>
+                            )}
+                        </h3>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(0,0,0,0.3)', padding: '4px', borderRadius: '12px', border: '1px solid var(--panel-border)' }}>
