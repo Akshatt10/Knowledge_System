@@ -69,21 +69,37 @@ const KnowledgeBase: React.FC = () => {
         fileList.forEach(file => formData.append('files', file));
 
         try {
+            // Upload returns instantly with job IDs
+            setBatchCurrent(1);
+            setCurrentFileName(fileList[0].name);
+            setUploadProgress(10);
+
+            const res = await documentService.upload(formData);
+            const jobs = res.data; // Array of { job_id, filename, status }
+
+            // Poll each job until done
             let completed = 0;
-            for (const file of fileList) {
+            for (const job of jobs) {
                 setBatchCurrent(completed + 1);
-                setCurrentFileName(file.name);
-                setUploadProgress(10);
+                setCurrentFileName(job.filename);
+                setUploadProgress(20);
 
-                const interval = setInterval(() => {
-                    setUploadProgress(prev => prev < 90 ? prev + 15 : prev);
-                }, 400);
+                const progressInterval = setInterval(() => {
+                    setUploadProgress(prev => prev < 85 ? prev + 10 : prev);
+                }, 1500);
 
-                if (completed === 0) {
-                    await documentService.upload(formData);
+                try {
+                    const result = await documentService.pollJobUntilDone(job.job_id);
+                    clearInterval(progressInterval);
+
+                    if (result.status === 'failed') {
+                        setError(`Failed to process ${job.filename}: ${result.error}`);
+                    }
+                } catch {
+                    clearInterval(progressInterval);
+                    setError(`Timed out processing ${job.filename}`);
                 }
 
-                clearInterval(interval);
                 setUploadProgress(100);
                 completed++;
             }
@@ -96,7 +112,7 @@ const KnowledgeBase: React.FC = () => {
                 loadData();
             }, 800);
         } catch (err: any) {
-            setError(err.response?.data?.detail || 'Bulk upload failed');
+            setError(err.response?.data?.detail || 'Upload failed');
             setUploading(false);
         }
     };
