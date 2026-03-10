@@ -26,7 +26,6 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# Dependency override for WebSockets where we can't easily send an auth header initially
 async def get_current_user_ws(token: str = Query(...), db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.ALGORITHM])

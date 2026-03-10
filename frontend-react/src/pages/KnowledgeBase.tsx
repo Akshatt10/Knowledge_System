@@ -69,15 +69,13 @@ const KnowledgeBase: React.FC = () => {
         fileList.forEach(file => formData.append('files', file));
 
         try {
-            // Upload returns instantly with job IDs
             setBatchCurrent(1);
             setCurrentFileName(fileList[0].name);
             setUploadProgress(10);
 
             const res = await documentService.upload(formData);
-            const jobs = res.data; // Array of { job_id, filename, status }
+            const jobs = res.data;
 
-            // Poll each job until done
             let completed = 0;
             for (const job of jobs) {
                 setBatchCurrent(completed + 1);
