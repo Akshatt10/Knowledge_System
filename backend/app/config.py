@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # ─────────────────────────────────────
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = "your-api-key"
-    LLM_MODEL: str = "gpt-4o-mini"  # Default production model
+    LLM_MODEL: str = "gpt-4.1-mini"  # Default production model
 
     # ─────────────────────────────────────
     # Embeddings / RAG
