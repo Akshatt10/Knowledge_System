@@ -12,9 +12,9 @@ import { WebSocketProvider } from './context/WebSocketContext';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
-    <div className="layout-container">
+    <div className="flex h-screen w-screen bg-app-radial">
       <Sidebar />
-      <main style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+      <main className="flex-1 flex overflow-hidden">
         {children}
       </main>
     </div>
