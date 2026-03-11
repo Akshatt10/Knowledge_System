@@ -121,3 +121,24 @@ class HealthResponse(BaseModel):
 
     status: str = "healthy"
     timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+
+
+# ── Connector Endpoints ────────────────────────────────────────────────
+
+
+class ConnectedAccountResponse(BaseModel):
+    id: str
+    provider: str
+    connected_at: str
+    last_synced_at: str | None = None
+
+
+class ConnectorListResponse(BaseModel):
+    accounts: list[ConnectedAccountResponse]
+
+
+class SyncResponse(BaseModel):
+    synced_count: int
+    new_documents: list[str]
+    errors: list[str]
+

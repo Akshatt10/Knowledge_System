@@ -26,3 +26,6 @@ PyPDF2
 pypdf
 docx2txt
 python-docx
+google-auth-oauthlib
+google-api-python-client
+requests

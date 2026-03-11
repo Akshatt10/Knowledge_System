@@ -9,7 +9,8 @@ import {
     User,
     ShieldCheck,
     Sparkles,
-    Hash
+    Hash,
+    Plug
 } from 'lucide-react';
 import { roomService } from '../services/api';
 
@@ -41,6 +42,7 @@ const Sidebar: React.FC = () => {
     const navItems = [
         { to: '/chat', label: 'Chat Hub', icon: <MessageSquare size={20} /> },
         { to: '/knowledge', label: 'Documents', icon: <Upload size={20} /> },
+        { to: '/connectors', label: 'Connectors', icon: <Plug size={20} /> },
     ];
 
     const adminItems = [

@@ -44,6 +44,7 @@ export const authService = {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     }),
     register: (data: any) => api.post('/auth/register', data),
+    googleSSO: () => api.get('/auth/google'),
 };
 
 // Document Services
@@ -95,6 +96,17 @@ export const roomService = {
         api.post(`/rooms/${roomId}/documents?document_id=${documentId}`),
     getRoomDocuments: (roomId: string) => api.get(`/rooms/${roomId}/documents`),
     leaveRoom: (roomId: string) => api.delete(`/rooms/${roomId}/leave`)
+};
+
+export const connectorService = {
+    getGoogleAuthUrl: () => api.get('/connectors/google/auth'),
+    listConnections: () => api.get('/connectors'),
+    listDriveFiles: () => api.get('/connectors/google/files'),
+    syncGoogle: (fileIds: string[]) => api.post('/connectors/google/sync', { file_ids: fileIds }),
+    getNotionAuthUrl: () => api.get('/connectors/notion/auth'),
+    listNotionPages: () => api.get('/connectors/notion/files'),
+    syncNotion: (fileIds: string[]) => api.post('/connectors/notion/sync', { file_ids: fileIds }),
+    disconnect: (accountId: string) => api.delete(`/connectors/${accountId}`),
 };
 
 export default api;
