@@ -1,6 +1,7 @@
 import uuid
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
@@ -15,6 +16,8 @@ from app.services.auth import (
 from app.config import settings
 
 router = APIRouter()
+
+_google_sso_verifiers: dict[str, str] = {}
 
 
 class UserCreate(BaseModel):
@@ -80,3 +83,110 @@ def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = 
         expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer", "role": user.role}
+
+
+@router.get("/google")
+def google_sso_redirect():
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Google SSO not configured.")
+
+    from google_auth_oauthlib.flow import Flow
+
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+            }
+        },
+        scopes=[
+            "openid",
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+        ],
+        redirect_uri=settings.GOOGLE_REDIRECT_URI.replace("/connectors/", "/auth/"),
+    )
+
+    auth_url, _ = flow.authorization_url(
+        access_type="offline",
+        prompt="consent",
+        state="sso_login",
+    )
+
+    if hasattr(flow, "code_verifier") and flow.code_verifier:
+        _google_sso_verifiers["sso_login"] = flow.code_verifier
+
+    return {"auth_url": auth_url}
+
+
+@router.get("/google/callback")
+def google_sso_callback(code: str, state: str = "sso_login", db: Session = Depends(get_db)):
+    from google_auth_oauthlib.flow import Flow
+    import requests as http_requests
+
+    try:
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": settings.GOOGLE_CLIENT_ID,
+                    "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            },
+            scopes=[
+                "openid",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "https://www.googleapis.com/auth/userinfo.profile",
+            ],
+            redirect_uri=settings.GOOGLE_REDIRECT_URI.replace("/connectors/", "/auth/"),
+        )
+
+        code_verifier = _google_sso_verifiers.pop(state, None)
+        flow.fetch_token(code=code, code_verifier=code_verifier)
+        creds = flow.credentials
+
+        userinfo = http_requests.get(
+            "https://www.googleapis.com/oauth2/v2/userinfo",
+            headers={"Authorization": f"Bearer {creds.token}"},
+        ).json()
+
+        email = userinfo.get("email")
+        if not email:
+            return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?sso_error=no_email")
+
+        user = db.query(User).filter(User.email == email).first()
+
+        if not user:
+            user = User(
+                id=str(uuid.uuid4()),
+                email=email,
+                hashed_password=get_password_hash(str(uuid.uuid4())),
+                role="USER",
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+        access_token = create_access_token(
+            data={"sub": user.id, "role": user.role},
+            expires_delta=access_token_expires
+        )
+
+        from urllib.parse import urlencode as _urlencode
+
+        params = _urlencode({
+            "sso_token": access_token,
+            "sso_role": user.role,
+            "sso_email": email,
+        })
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?{params}")
+
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).exception("Google SSO callback failed")
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?sso_error={str(exc)}")
+

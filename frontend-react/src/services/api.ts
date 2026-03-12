@@ -38,6 +38,7 @@ export const authService = {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
     }),
     register: (data: any) => api.post('/auth/register', data),
+    googleSSO: () => api.get('/auth/google'),
 };
 
 // Document Services
