@@ -5,6 +5,7 @@ RAG query engine using LangChain framework supporting Gemini.
 from __future__ import annotations
 
 import logging
+import time
 from typing import List, Dict
 
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -40,9 +41,13 @@ class RAGService:
         self.gemini_llm = None
         self.openai_llm = None
 
+        # Circuit breaker: skip Gemini for COOLDOWN seconds after a 429
+        self._gemini_blocked_until: float = 0.0
+        self._COOLDOWN = 10800  # 3 hours (Gemini free tier = 20 req/day)
+
         if settings.GEMINI_API_KEY:
             self.gemini_llm = ChatGoogleGenerativeAI(
-                model="gemini-2.5-flash", # Use standard stable model
+                model="gemini-2.5-flash",
                 temperature=0.0,
                 google_api_key=settings.GEMINI_API_KEY,
             )
@@ -54,8 +59,22 @@ class RAGService:
                 openai_api_key=settings.OPENAI_API_KEY,
             )
 
+    def _is_gemini_cooled_down(self) -> bool:
+        """Check if Gemini is currently in cooldown after a rate limit."""
+        return time.time() < self._gemini_blocked_until
+
+    def _trip_gemini_breaker(self):
+        """Block Gemini requests for COOLDOWN seconds."""
+        self._gemini_blocked_until = time.time() + self._COOLDOWN
+        logger.info("Circuit breaker tripped: skipping Gemini for %ds", self._COOLDOWN)
+
     def get_llm(self, provider: str = "openai"):
         if provider == "gemini":
+            # If Gemini is in cooldown, skip directly to fallback
+            if self._is_gemini_cooled_down():
+                logger.info("Gemini in cooldown, routing directly to OpenAI")
+                if self.openai_llm:
+                    return self.openai_llm
             if not self.gemini_llm:
                 if self.openai_llm:
                     logger.warning("Gemini not configured, falling back to OpenAI")
@@ -147,7 +166,13 @@ Answer the question using ONLY the context above.
         try:
             response = llm.invoke(messages)
         except Exception as e:
-            logger.warning("Primary LLM (%s) failed: %s", provider, str(e))
+            error_str = str(e)
+            logger.warning("Primary LLM (%s) failed: %s", provider, error_str)
+
+            # Trip circuit breaker on Gemini rate limit
+            if provider == "gemini" and ("429" in error_str or "RESOURCE_EXHAUSTED" in error_str):
+                self._trip_gemini_breaker()
+
             if provider == "gemini" and self.openai_llm:
                 logger.info("Automatically falling back to OpenAI LLM...")
                 response = self.openai_llm.invoke(messages)
@@ -155,7 +180,6 @@ Answer the question using ONLY the context above.
                 logger.info("Automatically falling back to Gemini LLM...")
                 response = self.gemini_llm.invoke(messages)
             else:
-                # If there's no backup configured, re-raise the error
                 raise
 
         answer_text = response.content.strip()

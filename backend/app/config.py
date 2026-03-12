@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     # ─────────────────────────────────────
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = "your-api-key"
-    LLM_MODEL: str = "gpt-4o-mini"  # Default production model
+    LLM_MODEL: str = "gpt-4.1-mini"  # Default production model
 
     # ─────────────────────────────────────
     # Embeddings / RAG
@@ -78,6 +78,11 @@ class Settings(BaseSettings):
     AWS_DEFAULT_REGION: str = "ap-south-1"
     S3_ENDPOINT_URL: str | None = None  # None = use real AWS S3; "http://localhost:9000" = use MinIO
     S3_BUCKET_NAME: str = "nexus-knowledge-base-2026"
+
+    # ─────────────────────────────────────
+    # Encryption
+    # ─────────────────────────────────────
+    DOCUMENT_ENCRYPTION_KEY: str = "" # Master Key (32-byte base64)
 
     # ─────────────────────────────────────
     # Auth

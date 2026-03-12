@@ -11,6 +11,7 @@ pydantic-settings
 python-jose[cryptography]
 bcrypt
 boto3
+cryptography
 pinecone
 langchain
 langchain-pinecone
