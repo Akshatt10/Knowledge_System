@@ -115,5 +115,19 @@ class Settings(BaseSettings):
     NOTION_CLIENT_SECRET: str = ""
     NOTION_REDIRECT_URI: str = "http://localhost:8000/api/connectors/notion/callback"
 
+    # ─────────────────────────────────────
+    # Connectors (Slack)
+    # ─────────────────────────────────────
+    SLACK_CLIENT_ID: str = ""
+    SLACK_CLIENT_SECRET: str = ""
+    SLACK_REDIRECT_URI: str = "http://localhost:8000/api/connectors/slack/callback"
+
+    # ─────────────────────────────────────
+    # Connectors (GitHub)
+    # ─────────────────────────────────────
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+    GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/connectors/github/callback"
+
 
 settings = Settings()

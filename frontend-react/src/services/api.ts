@@ -106,6 +106,14 @@ export const connectorService = {
     getNotionAuthUrl: () => api.get('/connectors/notion/auth'),
     listNotionPages: () => api.get('/connectors/notion/files'),
     syncNotion: (fileIds: string[]) => api.post('/connectors/notion/sync', { file_ids: fileIds }),
+    // Slack
+    getSlackAuthUrl: () => api.get('/connectors/slack/auth'),
+    listSlackChannels: () => api.get('/connectors/slack/files'),
+    syncSlack: (fileIds: string[]) => api.post('/connectors/slack/sync', { file_ids: fileIds }),
+    // GitHub
+    getGitHubAuthUrl: () => api.get('/connectors/github/auth'),
+    listGitHubFiles: () => api.get('/connectors/github/files'),
+    syncGitHub: (fileIds: string[]) => api.post('/connectors/github/sync', { file_ids: fileIds }),
     disconnect: (accountId: string) => api.delete(`/connectors/${accountId}`),
 };
 

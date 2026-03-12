@@ -14,6 +14,8 @@ from app.models.schemas import ConnectedAccountResponse, ConnectorListResponse, 
 from app.services.auth import get_current_user, get_db
 from app.services.connectors.google_drive import google_drive_connector
 from app.services.connectors.notion import notion_connector
+from app.services.connectors.slack import slack_connector
+from app.services.connectors.github import github_connector
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Connectors"])
@@ -128,6 +130,112 @@ def sync_notion(
         raise HTTPException(status_code=500, detail=f"Sync failed: {str(exc)}")
 
 
+# ── Slack ──────────────────────────────────────────────────────────────
+
+@router.get("/slack/auth")
+def slack_auth_redirect(current_user: User = Depends(get_current_user)):
+    if not settings.SLACK_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Slack OAuth not configured.")
+    url = slack_connector.get_auth_url(current_user.id)
+    return {"auth_url": url}
+
+
+@router.get("/slack/callback")
+def slack_auth_callback(code: str, state: str, db: Session = Depends(get_db)):
+    try:
+        user_id = slack_connector.resolve_user_from_state(state)
+        slack_connector.handle_callback(code=code, user_id=user_id, db=db)
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/connectors?status=slack_connected")
+    except Exception as exc:
+        logger.exception("Slack OAuth callback failed")
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/connectors?status=error&message={str(exc)}")
+
+
+@router.get("/slack/files")
+def list_slack_channels(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        files = slack_connector.fetch_documents(user_id=current_user.id, db=db)
+        return {"files": files}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/slack/sync", response_model=SyncResponse)
+def sync_slack(
+    body: SelectiveSyncRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        result = slack_connector.sync_selected(
+            user_id=current_user.id,
+            file_ids=body.file_ids,
+            db=db,
+        )
+        return SyncResponse(**result)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("Slack sync failed")
+        raise HTTPException(status_code=500, detail=f"Sync failed: {str(exc)}")
+
+
+# ── GitHub ─────────────────────────────────────────────────────────────
+
+@router.get("/github/auth")
+def github_auth_redirect(current_user: User = Depends(get_current_user)):
+    if not settings.GITHUB_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="GitHub OAuth not configured.")
+    url = github_connector.get_auth_url(current_user.id)
+    return {"auth_url": url}
+
+
+@router.get("/github/callback")
+def github_auth_callback(code: str, state: str, db: Session = Depends(get_db)):
+    try:
+        user_id = github_connector.resolve_user_from_state(state)
+        github_connector.handle_callback(code=code, user_id=user_id, db=db)
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/connectors?status=github_connected")
+    except Exception as exc:
+        logger.exception("GitHub OAuth callback failed")
+        return RedirectResponse(url=f"{settings.FRONTEND_URL}/connectors?status=error&message={str(exc)}")
+
+
+@router.get("/github/files")
+def list_github_files(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        files = github_connector.fetch_documents(user_id=current_user.id, db=db)
+        return {"files": files}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/github/sync", response_model=SyncResponse)
+def sync_github(
+    body: SelectiveSyncRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    try:
+        result = github_connector.sync_selected(
+            user_id=current_user.id,
+            file_ids=body.file_ids,
+            db=db,
+        )
+        return SyncResponse(**result)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        logger.exception("GitHub sync failed")
+        raise HTTPException(status_code=500, detail=f"Sync failed: {str(exc)}")
+
+
 # ── Common ─────────────────────────────────────────────────────────────
 
 @router.get("", response_model=ConnectorListResponse)
@@ -170,4 +278,5 @@ def disconnect_account(
     db.delete(account)
     db.commit()
     return {"message": "Account disconnected successfully.", "account_id": account_id}
+
 

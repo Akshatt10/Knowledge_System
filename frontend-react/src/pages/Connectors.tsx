@@ -14,7 +14,9 @@ import {
     HardDrive,
     FileText,
     Check,
-    BookOpen
+    BookOpen,
+    MessageSquare,
+    Github
 } from 'lucide-react';
 
 interface ConnectedAccount {
@@ -45,9 +47,11 @@ const FILE_TYPE_LABELS: Record<string, string> = {
     'application/json': 'JSON',
     'application/vnd.google-apps.document': 'Google Doc',
     'notion_page': 'Notion Page',
+    'slack_channel': 'Slack Channel',
+    'github_file': 'GitHub Doc',
 };
 
-type ActivePicker = 'google_drive' | 'notion' | null;
+type ActivePicker = 'google_drive' | 'notion' | 'slack' | 'github' | null;
 
 const Connectors: React.FC = () => {
     const [searchParams] = useSearchParams();
@@ -66,9 +70,14 @@ const Connectors: React.FC = () => {
     const status = searchParams.get('status');
 
     useEffect(() => {
-        if (status === 'connected' || status === 'notion_connected') {
-            const provider = status === 'notion_connected' ? 'Notion' : 'Google Drive';
-            setSuccessMsg(`${provider} connected successfully!`);
+        if (status === 'connected' || status === 'notion_connected' || status === 'slack_connected' || status === 'github_connected') {
+            const providerMap: Record<string, string> = {
+                'connected': 'Google Drive',
+                'notion_connected': 'Notion',
+                'slack_connected': 'Slack',
+                'github_connected': 'GitHub',
+            };
+            setSuccessMsg(`${providerMap[status] || 'Provider'} connected successfully!`);
             setTimeout(() => setSuccessMsg(null), 5000);
         }
         fetchConnections();
@@ -85,14 +94,19 @@ const Connectors: React.FC = () => {
         }
     };
 
-    const handleConnect = async (provider: 'google' | 'notion') => {
+    const handleConnect = async (provider: 'google' | 'notion' | 'slack' | 'github') => {
         try {
-            const res = provider === 'google'
-                ? await connectorService.getGoogleAuthUrl()
-                : await connectorService.getNotionAuthUrl();
+            let res;
+            switch (provider) {
+                case 'google': res = await connectorService.getGoogleAuthUrl(); break;
+                case 'notion': res = await connectorService.getNotionAuthUrl(); break;
+                case 'slack': res = await connectorService.getSlackAuthUrl(); break;
+                case 'github': res = await connectorService.getGitHubAuthUrl(); break;
+            }
             window.location.href = res.data.auth_url;
         } catch {
-            setError(`Failed to start ${provider === 'google' ? 'Google' : 'Notion'} authentication.`);
+            const labels: Record<string, string> = { google: 'Google', notion: 'Notion', slack: 'Slack', github: 'GitHub' };
+            setError(`Failed to start ${labels[provider]} authentication.`);
         }
     };
 
@@ -100,9 +114,14 @@ const Connectors: React.FC = () => {
         setLoadingFiles(true);
         setError(null);
         try {
-            const res = provider === 'google_drive'
-                ? await connectorService.listDriveFiles()
-                : await connectorService.listNotionPages();
+            let res;
+            switch (provider) {
+                case 'google_drive': res = await connectorService.listDriveFiles(); break;
+                case 'notion': res = await connectorService.listNotionPages(); break;
+                case 'slack': res = await connectorService.listSlackChannels(); break;
+                case 'github': res = await connectorService.listGitHubFiles(); break;
+                default: return;
+            }
             setRemoteFiles(res.data.files);
             setSelectedFiles(new Set());
             setActivePicker(provider);
@@ -137,9 +156,14 @@ const Connectors: React.FC = () => {
         setError(null);
         try {
             const ids = Array.from(selectedFiles);
-            const res = activePicker === 'google_drive'
-                ? await connectorService.syncGoogle(ids)
-                : await connectorService.syncNotion(ids);
+            let res;
+            switch (activePicker) {
+                case 'google_drive': res = await connectorService.syncGoogle(ids); break;
+                case 'notion': res = await connectorService.syncNotion(ids); break;
+                case 'slack': res = await connectorService.syncSlack(ids); break;
+                case 'github': res = await connectorService.syncGitHub(ids); break;
+                default: return;
+            }
             setSyncResult(res.data);
             setActivePicker(null);
             setSelectedFiles(new Set());
@@ -169,7 +193,7 @@ const Connectors: React.FC = () => {
 
     const renderConnectorCard = (
         provider: string,
-        providerKey: 'google' | 'notion',
+        providerKey: 'google' | 'notion' | 'slack' | 'github',
         label: string,
         description: string,
         icon: React.ReactNode,
@@ -249,7 +273,13 @@ const Connectors: React.FC = () => {
         );
     };
 
-    const pickerLabel = activePicker === 'google_drive' ? 'Drive' : 'Notion';
+    const pickerLabels: Record<string, string> = {
+        'google_drive': 'Drive',
+        'notion': 'Notion',
+        'slack': 'Slack Channels',
+        'github': 'GitHub Docs',
+    };
+    const pickerLabel = activePicker ? pickerLabels[activePicker] || 'Files' : 'Files';
 
     return (
         <div className="flex-1 p-8 overflow-y-auto">
@@ -309,6 +339,22 @@ const Connectors: React.FC = () => {
                             'bg-white/5',
                         )}
 
+                        {renderConnectorCard(
+                            'slack', 'slack',
+                            'Slack',
+                            'Mine channel conversations as searchable knowledge',
+                            <MessageSquare size={24} className="text-green-400" />,
+                            'bg-green-500/10',
+                        )}
+
+                        {renderConnectorCard(
+                            'github', 'github',
+                            'GitHub',
+                            'Import READMEs, docs, and markdown from repositories',
+                            <Github size={24} className="text-purple-400" />,
+                            'bg-purple-500/10',
+                        )}
+
                         {/* File Picker */}
                         <AnimatePresence>
                             {activePicker && remoteFiles.length > 0 && (
@@ -321,7 +367,7 @@ const Connectors: React.FC = () => {
                                     <div className="flex items-center justify-between mb-4">
                                         <h3 className="text-white font-semibold flex items-center gap-2">
                                             <FileText size={18} className="text-accentGlow" />
-                                            Your {pickerLabel} Files ({remoteFiles.length})
+                                            Your {pickerLabel} ({remoteFiles.length})
                                         </h3>
                                         <div className="flex items-center gap-3">
                                             <button
@@ -367,6 +413,7 @@ const Connectors: React.FC = () => {
                                                     <div className="text-[0.65rem] text-textSec">
                                                         {FILE_TYPE_LABELS[file.mimeType] || 'File'}
                                                         {file.modifiedTime && ` · ${new Date(file.modifiedTime).toLocaleDateString()}`}
+                                                        {file.size && ` · ${file.size}`}
                                                     </div>
                                                 </div>
                                             </button>
@@ -425,19 +472,6 @@ const Connectors: React.FC = () => {
                                 </motion.div>
                             )}
                         </AnimatePresence>
-
-                        {/* Coming Soon */}
-                        <div className="glass-panel p-6 rounded-2xl opacity-50">
-                            <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-textSec">
-                                    <Plug size={24} />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-semibold text-white/60">Slack</h3>
-                                    <p className="text-xs text-textSec">Coming soon</p>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 )}
             </div>

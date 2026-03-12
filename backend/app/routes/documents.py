@@ -32,7 +32,7 @@ from app.services.auth import SessionLocal
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Documents"])
 
-ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx", ".json"}
+ALLOWED_EXTENSIONS = {".pdf", ".txt", ".docx", ".json", ".md"}
 MAX_UPLOAD_SIZE = 20 * 1024 * 1024  # 20 MB
 
 
@@ -186,7 +186,7 @@ async def list_documents(
     db: Session = Depends(get_db)
 ):
     """List documents belonging to the current user."""
-    docs_raw = db.query(Document).filter(Document.user_id == str(current_user.id)).all()
+    docs_raw = db.query(Document).filter(Document.user_id == str(current_user.id)).order_by(Document.uploaded_at.desc()).all()
 
     documents = [
         DocumentInfo(
