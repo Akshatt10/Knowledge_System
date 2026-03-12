@@ -189,6 +189,7 @@ def google_sso_callback(code: str, state: str = "sso_login", db: Session = Depen
             "sso_token": access_token,
             "sso_role": user.role,
             "sso_email": email,
+            "sso_name": userinfo.get("name", email.split('@')[0])
         })
         return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?{params}")
 

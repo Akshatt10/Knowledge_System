@@ -109,4 +109,5 @@ export const connectorService = {
     disconnect: (accountId: string) => api.delete(`/connectors/${accountId}`),
 };
 
+
 export default api;

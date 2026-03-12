@@ -155,7 +155,7 @@ const Sidebar: React.FC = () => {
                     </div>
                     <div className="overflow-hidden max-w-[120px]">
                         <div className="text-sm font-semibold truncate text-white">
-                            {user?.email.split('@')[0]}
+                            {user?.name || user?.email.split('@')[0]}
                         </div>
                         <div className="text-[0.7rem] font-medium text-textSec uppercase tracking-wider">
                             {user?.role}
