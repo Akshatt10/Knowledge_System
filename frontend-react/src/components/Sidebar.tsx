@@ -40,7 +40,7 @@ const Sidebar: React.FC = () => {
 
     const navItems = [
         { to: '/chat', label: 'Chat Hub', icon: <MessageSquare size={20} /> },
-        { to: '/knowledge', label: 'Knowledge Base', icon: <Upload size={20} /> },
+        { to: '/knowledge', label: 'Documents', icon: <Upload size={20} /> },
     ];
 
     const adminItems = [
@@ -49,59 +49,66 @@ const Sidebar: React.FC = () => {
     ];
 
     return (
-        <aside className="glass-panel" style={{
-            width: '260px', height: 'calc(100vh - 40px)', margin: '20px',
-            padding: '24px', display: 'flex', flexDirection: 'column'
-        }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '40px', paddingLeft: '8px' }}>
-                <Sparkles size={24} color="var(--accent-glow)" />
-                <h2 style={{ fontSize: '1.4rem', color: '#fff' }}>Nexus</h2>
+        <aside className="glass-panel w-[280px] h-[calc(100vh-40px)] m-5 p-6 flex flex-col relative overflow-hidden group">
+            {/* Subtle glow effect behind the sidebar */}
+            <div className="absolute top-0 left-0 w-full h-32 bg-accentGlow/5 blur-[50px] -z-10 rounded-t-2xl pointer-events-none"></div>
+
+            <div className="flex items-center gap-3 mb-10 pl-2">
+                <Sparkles size={28} className="text-accentGlow drop-shadow-glow" />
+                <h2 className="text-2xl font-outfit font-bold tracking-wide text-white">Nexus</h2>
             </div>
 
-            <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <nav className="flex-1 flex flex-col gap-2 overflow-y-auto pr-2">
                 {navItems.map(item => (
                     <NavLink
                         key={item.to}
                         to={item.to}
-                        style={({ isActive }) => ({
-                            display: 'flex', alignItems: 'center', gap: '12px',
-                            padding: '12px 16px', borderRadius: 'var(--radius-sm)',
-                            textDecoration: 'none', color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                            background: isActive ? 'rgba(0, 240, 255, 0.1)' : 'transparent',
-                            fontWeight: '500', transition: 'var(--transition-smooth)'
-                        })}
+                        className={({ isActive }) =>
+                            `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 relative overflow-hidden ${isActive
+                                ? 'text-accentGlow bg-accentGlow/10 shadow-[inset_0_0_20px_rgba(0,240,255,0.05)]'
+                                : 'text-textSec hover:text-white hover:bg-white/5'
+                            }`
+                        }
                     >
-                        {item.icon} <span>{item.label}</span>
+                        {({ isActive }) => (
+                            <>
+                                {isActive && (
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-accentGlow rounded-r-md shadow-glow"></div>
+                                )}
+                                {item.icon}
+                                <span>{item.label}</span>
+                            </>
+                        )}
                     </NavLink>
                 ))}
 
                 {/* SHARED SPACES SUBMENU */}
                 {rooms.length > 0 && (
-                    <div style={{ marginTop: '20px' }}>
-                        <div style={{
-                            fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)',
-                            textTransform: 'uppercase', letterSpacing: '1px',
-                            marginBottom: '8px', paddingLeft: '16px'
-                        }}>
-                            Shared Spaces
+                    <div className="mt-8">
+                        <div className="text-[0.7rem] text-white/30 uppercase tracking-widest font-semibold mb-3 pl-4">
+                            Chat Rooms
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <div className="flex flex-col gap-1">
                             {rooms.map(room => (
                                 <NavLink
                                     key={room.id}
                                     to={`/chat?room=${room.id}`}
-                                    style={({ isActive }) => ({
-                                        display: 'flex', alignItems: 'center', gap: '10px',
-                                        padding: '8px 16px', borderRadius: 'var(--radius-sm)',
-                                        textDecoration: 'none', color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                                        background: isActive ? 'rgba(0, 240, 255, 0.05)' : 'transparent',
-                                        fontSize: '0.85rem', fontWeight: '500', transition: 'var(--transition-smooth)'
-                                    })}
+                                    className={({ isActive }) =>
+                                        `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 relative ${isActive
+                                            ? 'text-accentGlow bg-accentGlow/5'
+                                            : 'text-textSec hover:text-white hover:bg-white/5'
+                                        }`
+                                    }
                                 >
-                                    <Hash size={14} color="var(--accent-glow)" />
-                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                        {room.name}
-                                    </span>
+                                    {({ isActive }) => (
+                                        <>
+                                            {isActive && (
+                                                <div className="absolute left-0 top-0 bottom-0 w-1 bg-accentGlow rounded-r-md shadow-glow"></div>
+                                            )}
+                                            <Hash size={16} className={isActive ? "text-accentGlow drop-shadow-glow" : "text-white/40"} />
+                                            <span className="truncate">{room.name}</span>
+                                        </>
+                                    )}
                                 </NavLink>
                             ))}
                         </div>
@@ -110,50 +117,45 @@ const Sidebar: React.FC = () => {
 
                 {isAdmin && (
                     <>
-                        <div style={{
-                            fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)',
-                            textTransform: 'uppercase', letterSpacing: '1px',
-                            marginTop: '24px', marginBottom: '8px', paddingLeft: '16px'
-                        }}>
+                        <div className="text-[0.7rem] text-danger/60 uppercase tracking-widest font-semibold mt-10 mb-3 pl-4">
                             Administration
                         </div>
                         {adminItems.map(item => (
                             <NavLink
                                 key={item.to}
                                 to={item.to}
-                                style={({ isActive }) => ({
-                                    display: 'flex', alignItems: 'center', gap: '12px',
-                                    padding: '12px 16px', borderRadius: 'var(--radius-sm)',
-                                    textDecoration: 'none', color: isActive ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                                    background: isActive ? 'rgba(0, 240, 255, 0.1)' : 'transparent',
-                                    fontWeight: '500', transition: 'var(--transition-smooth)'
-                                })}
+                                className={({ isActive }) =>
+                                    `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 relative ${isActive
+                                        ? 'text-danger bg-danger/10 shadow-[inset_0_0_20px_rgba(255,77,77,0.05)]'
+                                        : 'text-textSec hover:text-white hover:bg-white/5'
+                                    }`
+                                }
                             >
-                                {item.icon} <span>{item.label}</span>
+                                {({ isActive }) => (
+                                    <>
+                                        {isActive && (
+                                            <div className="absolute left-0 top-0 bottom-0 w-1 bg-danger rounded-r-md shadow-glow-error"></div>
+                                        )}
+                                        {item.icon}
+                                        <span>{item.label}</span>
+                                    </>
+                                )}
                             </NavLink>
                         ))}
                     </>
                 )}
             </nav>
 
-            <div style={{
-                marginTop: 'auto', paddingTop: '20px',
-                borderTop: '1px solid var(--panel-border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-            }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{
-                        width: '36px', height: '36px', borderRadius: '50%',
-                        background: 'var(--accent-gradient)', display: 'flex',
-                        alignItems: 'center', justifyContent: 'center'
-                    }}>
-                        {isAdmin ? <ShieldCheck size={18} color="#fff" /> : <User size={18} color="#fff" />}
+            <div className="mt-auto pt-6 border-t border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-accent-gradient flex items-center justify-center shadow-glow">
+                        {isAdmin ? <ShieldCheck size={20} className="text-white" /> : <User size={20} className="text-white" />}
                     </div>
-                    <div style={{ overflow: 'hidden', maxWidth: '120px' }}>
-                        <div style={{ fontSize: '0.8rem', fontWeight: '600', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                            {user?.email.split('@')[0]}
+                    <div className="overflow-hidden max-w-[120px]">
+                        <div className="text-sm font-semibold truncate text-white">
+                            {user?.name || user?.email.split('@')[0]}
                         </div>
-                        <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
+                        <div className="text-[0.7rem] font-medium text-textSec uppercase tracking-wider">
                             {user?.role}
                         </div>
                     </div>
@@ -161,13 +163,9 @@ const Sidebar: React.FC = () => {
                 <button
                     onClick={handleLogout}
                     title="Logout"
-                    style={{
-                        background: 'none', border: 'none', color: 'var(--text-secondary)',
-                        cursor: 'pointer', padding: '8px', borderRadius: '8px',
-                        transition: 'var(--transition-bounce)'
-                    }}
+                    className="p-2.5 rounded-xl text-textSec hover:text-danger hover:bg-danger/10 transition-all duration-300 group"
                 >
-                    <LogOut size={20} />
+                    <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
                 </button>
             </div>
         </aside>

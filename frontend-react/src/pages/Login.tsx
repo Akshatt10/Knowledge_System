@@ -31,6 +31,7 @@ const Login: React.FC = () => {
         const ssoToken = searchParams.get('sso_token');
         const ssoRole = searchParams.get('sso_role');
         const ssoEmail = searchParams.get('sso_email');
+        const ssoName = searchParams.get('sso_name');
         const ssoError = searchParams.get('sso_error');
 
         if (ssoError) {
@@ -43,7 +44,8 @@ const Login: React.FC = () => {
             localStorage.setItem('token', ssoToken);
             localStorage.setItem('role', ssoRole);
             localStorage.setItem('email', ssoEmail);
-            setAuth(ssoToken, ssoRole, ssoEmail);
+            if (ssoName) localStorage.setItem('name', ssoName);
+            setAuth(ssoToken, ssoRole, ssoEmail, ssoName || undefined);
             // Small delay so AuthContext state propagates before route change
             setTimeout(() => navigate('/chat', { replace: true }), 50);
         }

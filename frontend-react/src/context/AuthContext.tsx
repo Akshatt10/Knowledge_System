@@ -3,13 +3,14 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 interface User {
     id: string;
     email: string;
+    name?: string;
     role: 'USER' | 'ADMIN';
 }
 
 interface AuthContextType {
     user: User | null;
     token: string | null;
-    login: (token: string, role: string, email: string) => void;
+    login: (token: string, role: string, email: string, name?: string) => void;
     logout: () => void;
     isAuthenticated: boolean;
     isAdmin: boolean;
@@ -23,37 +24,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const savedToken = localStorage.getItem('token');
         const savedRole = localStorage.getItem('role');
         const savedEmail = localStorage.getItem('email');
+        const savedName = localStorage.getItem('name');
         if (savedToken && savedRole && savedEmail) {
-            return { id: '', email: savedEmail, role: savedRole as 'USER' | 'ADMIN' };
+            return { id: '', email: savedEmail, role: savedRole as 'USER' | 'ADMIN', name: savedName || undefined };
         }
         return null;
     });
 
-    // Handle token changes (logout/login)
     useEffect(() => {
         if (!token) {
             setUser(null);
         }
     }, [token]);
 
-    const login = (newToken: string, role: string, email: string) => {
+    const login = (newToken: string, role: string, email: string, name?: string) => {
         localStorage.setItem('token', newToken);
         localStorage.setItem('role', role);
         localStorage.setItem('email', email);
+        if (name) localStorage.setItem('name', name);
 
-        // Clear any lingering session chat data from a previous user
         sessionStorage.clear();
 
         setToken(newToken);
-        setUser({ id: '', email, role: role as 'USER' | 'ADMIN' });
+        setUser({ id: '', email, role: role as 'USER' | 'ADMIN', name });
     };
 
     const logout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('role');
         localStorage.removeItem('email');
+        localStorage.removeItem('name');
 
-        // Ensure no chat history is left behind when logging out
         sessionStorage.clear();
 
         setToken(null);

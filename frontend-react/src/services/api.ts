@@ -26,7 +26,13 @@ api.interceptors.response.use(
             localStorage.removeItem('token');
             localStorage.removeItem('role');
             localStorage.removeItem('email');
-            window.location.href = '/login';
+
+            // Only redirect if we are not already on the login page
+            // and the request wasn't the login request itself
+            const isAuthReq = error.config?.url?.includes('/auth/login');
+            if (window.location.pathname !== '/login' && !isAuthReq) {
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }
@@ -46,6 +52,18 @@ export const documentService = {
     upload: (formData: FormData) => api.post('/documents/upload', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
     }),
+    getJobStatus: (jobId: string) => api.get(`/documents/jobs/${jobId}`),
+    pollJobUntilDone: async (jobId: string, intervalMs = 2000, timeoutMs = 120000): Promise<any> => {
+        const start = Date.now();
+        while (Date.now() - start < timeoutMs) {
+            const res = await api.get(`/documents/jobs/${jobId}`);
+            if (res.data.status === 'done' || res.data.status === 'failed') {
+                return res.data;
+            }
+            await new Promise(resolve => setTimeout(resolve, intervalMs));
+        }
+        throw new Error('Ingestion timed out after 2 minutes.');
+    },
     getAll: () => api.get('/documents'),
     delete: (id: string) => api.delete(`/documents/${id}`),
 };
@@ -79,5 +97,6 @@ export const roomService = {
     getRoomDocuments: (roomId: string) => api.get(`/rooms/${roomId}/documents`),
     leaveRoom: (roomId: string) => api.delete(`/rooms/${roomId}/leave`)
 };
+
 
 export default api;

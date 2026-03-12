@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 
 interface WebSocketMessage {
@@ -36,9 +36,18 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const [error, setError] = useState<string | null>(null);
 
     const activeAiMessageId = useRef<string | null>(null);
+    const reconnectCount = useRef(0);
+    const reconnectTimeoutId = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const manualDisconnect = useRef(false);
 
-    const connectToRoom = (roomId: string) => {
+    const connectToRoom = useCallback((roomId: string) => {
         if (!token) return;
+
+        if (reconnectTimeoutId.current) {
+            clearTimeout(reconnectTimeoutId.current);
+            reconnectTimeoutId.current = null;
+        }
+        manualDisconnect.current = false;
 
         if (ws.current) {
             ws.current.close();
@@ -64,6 +73,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         ws.current.onopen = () => {
             setIsConnected(true);
             setError(null);
+            reconnectCount.current = 0;
         };
 
         ws.current.onclose = (event) => {
@@ -72,8 +82,19 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 setError("Authentication failed.");
             } else if (event.code === 4004) {
                 setError("Room completely not found.");
+            } else if (!manualDisconnect.current) {
+                if (reconnectCount.current < 5) {
+                    const timeout = Math.min(1000 * Math.pow(2, reconnectCount.current), 10000);
+                    setError(`Connection lost. Reconnecting in ${timeout / 1000}s...`);
+                    reconnectTimeoutId.current = setTimeout(() => {
+                        reconnectCount.current += 1;
+                        connectToRoom(roomId);
+                    }, timeout);
+                } else {
+                    setError("Connection lost. Maximum reconnect attempts reached.");
+                }
             } else {
-                console.log("WebSocket Disconnected", event.reason);
+                console.log("WebSocket Disconnected intentionally");
             }
         };
 
@@ -102,10 +123,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                         const existingMsgIndex = newMessages.findIndex(m => m.id === data.id);
 
                         if (existingMsgIndex >= 0) {
-                            // Update existing stream
                             newMessages[existingMsgIndex].content = data.content;
                         } else if (data.status === 'start' || data.content) {
-                            // Create new stream
                             newMessages.push({
                                 id: data.id!,
                                 role: 'assistant',
@@ -120,9 +139,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 console.error("Failed to parse websocket message", err);
             }
         };
-    };
+    }, [token]);
 
-    const disconnect = () => {
+    const disconnect = useCallback(() => {
+        manualDisconnect.current = true;
+        if (reconnectTimeoutId.current) {
+            clearTimeout(reconnectTimeoutId.current);
+            reconnectTimeoutId.current = null;
+        }
         if (ws.current) {
             ws.current.close();
             ws.current = null;
@@ -130,21 +154,21 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         setIsConnected(false);
         setMessages([]);
         activeAiMessageId.current = null;
-    };
+        reconnectCount.current = 0;
+    }, []);
 
-    const sendMessage = (prompt: string, provider: string) => {
+    const sendMessage = useCallback((prompt: string, provider: string) => {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
             ws.current.send(JSON.stringify({ prompt, provider }));
         } else {
             setError("Cannot send message: WebSocket is disconnected.");
         }
-    };
+    }, []);
 
-    const setInitialHistory = (history: ChatMessage[]) => {
+    const setInitialHistory = useCallback((history: ChatMessage[]) => {
         setMessages(history);
-    }
+    }, []);
 
-    // Cleanup on unmount
     useEffect(() => {
         return () => disconnect();
     }, []);
