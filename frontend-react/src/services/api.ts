@@ -83,6 +83,7 @@ export const adminService = {
     updateUser: (id: string, data: { role?: string; is_active?: boolean }) =>
         api.patch(`/admin/users/${id}`, data),
     deleteUser: (id: string) => api.delete(`/admin/users/${id}`),
+    getTimeSeriesStats: (period: string) => api.get(`/admin/stats/time-series?period=${period}`),
 };
 
 // Room / Multiplayer Services

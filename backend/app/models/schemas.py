@@ -141,4 +141,16 @@ class SyncResponse(BaseModel):
     synced_count: int
     new_documents: list[str]
     errors: list[str]
+    
 
+# ── Admin Stats ──────────────────────────────────────────────────────────
+
+class DataPoint(BaseModel):
+    timestamp: str
+    value: int
+
+class TimeSeriesResponse(BaseModel):
+    user_growth: list[DataPoint]
+    document_growth: list[DataPoint]
+    active_users: list[DataPoint]
+    ai_queries: list[DataPoint]

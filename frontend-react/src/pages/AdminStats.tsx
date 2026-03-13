@@ -1,16 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer
+} from 'recharts';
+import {
     Layers,
     FileText,
     Activity,
     ShieldCheck,
-    Clock,
     RefreshCw,
     Loader2,
     Users,
     Server,
-    Database
+    Database,
+    LineChart,
+    Cpu
 } from 'lucide-react';
 import { adminService } from '../services/api';
 
@@ -21,10 +31,33 @@ interface Stats {
     collection_name: string;
 }
 
+interface DataPoint {
+    timestamp: string;
+    value: number;
+}
+
+interface TimeSeriesData {
+    user_growth: DataPoint[];
+    document_growth: DataPoint[];
+    active_users: DataPoint[];
+    ai_queries: DataPoint[];
+}
+
+type Period = '1d' | '7d' | '30d' | '6m' | '12m';
+
 const AdminStats: React.FC = () => {
     const [stats, setStats] = useState<Stats | null>(null);
     const [health, setHealth] = useState<'healthy' | 'error' | 'checking'>('checking');
     const [loading, setLoading] = useState(true);
+
+    const [period, setPeriod] = useState<Period>('7d');
+    const [timeSeries, setTimeSeries] = useState<TimeSeriesData>({ 
+        user_growth: [], 
+        document_growth: [],
+        active_users: [],
+        ai_queries: []
+    });
+    const [loadingSeries, setLoadingSeries] = useState(false);
 
     const loadData = async () => {
         setLoading(true);
@@ -42,7 +75,25 @@ const AdminStats: React.FC = () => {
         }
     };
 
-    useEffect(() => { loadData(); }, []);
+    const loadTimeSeries = async (selectedPeriod: Period) => {
+        setLoadingSeries(true);
+        try {
+            const res = await adminService.getTimeSeriesStats(selectedPeriod);
+            setTimeSeries(res.data);
+        } catch (error) {
+            console.error("Failed to load time series data", error);
+        } finally {
+            setLoadingSeries(false);
+        }
+    };
+
+    useEffect(() => {
+        loadData();
+    }, []);
+
+    useEffect(() => {
+        loadTimeSeries(period);
+    }, [period]);
 
     const cards = [
         {
@@ -74,6 +125,16 @@ const AdminStats: React.FC = () => {
         },
     ];
 
+    // Formatter for Recharts Tooltip
+    // Fix: Recharts Tooltip passes a string OR number depending on scale, so we use 'any' wrapper inside
+    const formatTooltipLabel = (val: any) => {
+        if (!val) return '';
+        const d = new Date(val);
+        if (period === '1d') return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (period === '6m' || period === '12m') return d.toLocaleDateString([], { month: 'short', year: 'numeric' });
+        return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    };
+
     return (
         <div className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative">
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accentSec/5 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
@@ -102,15 +163,14 @@ const AdminStats: React.FC = () => {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className={`glass-panel p-4 md:p-5 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border backdrop-blur-md shadow-lg ${health === 'healthy'
-                        ? 'bg-success/5 border-success/20 shadow-[inset_0_0_20px_rgba(16,185,129,0.05)]'
-                        : health === 'error'
-                            ? 'bg-danger/5 border-danger/20 shadow-[inset_0_0_20px_rgba(244,63,94,0.05)]'
-                            : 'bg-white/5 border-white/10'
+                            ? 'bg-success/5 border-success/20 shadow-[inset_0_0_20px_rgba(16,185,129,0.05)]'
+                            : health === 'error'
+                                ? 'bg-danger/5 border-danger/20 shadow-[inset_0_0_20px_rgba(244,63,94,0.05)]'
+                                : 'bg-white/5 border-white/10'
                         }`}
                 >
                     <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${health === 'healthy' ? 'bg-success/20' : health === 'error' ? 'bg-danger/20' : 'bg-white/10'
-                            }`}>
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${health === 'healthy' ? 'bg-success/20' : health === 'error' ? 'bg-danger/20' : 'bg-white/10'}`}>
                             {health === 'checking' ? (
                                 <Loader2 size={24} className="text-white animate-spin" />
                             ) : (
@@ -128,56 +188,273 @@ const AdminStats: React.FC = () => {
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 text-xs font-medium text-textSec/80 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5 shrink-0">
-                        <Clock size={14} /> Last heartbeat: {new Date().toLocaleTimeString()}
-                    </div>
                 </motion.div>
 
-                {/* Metrics Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {/* Top Level Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {cards.map((card, idx) => (
                         <motion.div
                             key={idx}
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.1 }}
-                            className={`group relative glass-panel p-6 rounded-2xl overflow-hidden backdrop-blur-xl border transition-all duration-300 hover:-translate-y-1 shadow-xl ${card.borderClass}`}
+                            className={`group glass-panel p-6 rounded-2xl relative overflow-hidden backdrop-blur-xl border border-white/10 hover:border-white/20 transition-all shadow-lg`}
                         >
-                            {/* Background Gradient Effect */}
-                            <div className={`absolute inset-0 bg-gradient-to-br opacity-50 ${card.colorClass} z-0`}></div>
-
-                            <div className="relative z-10 flex flex-col h-full">
-                                <div className="flex justify-between items-start mb-6">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border border-white/10 ${card.bgGlow} shadow-lg backdrop-blur-sm group-hover:scale-110 transition-transform duration-500`}>
-                                        {card.icon}
-                                    </div>
-                                </div>
-
-                                <div className="mt-auto">
-                                    <h3 className="text-4xl font-outfit font-bold text-white mb-1 tracking-tight drop-shadow-md">
-                                        {loading ? <span className="animate-pulse opacity-50">...</span> : card.count.toLocaleString()}
-                                    </h3>
-                                    <p className={`text-xs font-bold uppercase tracking-widest ${card.textClass} opacity-80`}>
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest ${card.textClass} opacity-80 mb-1`}>
                                         {card.label}
                                     </p>
+                                    <h3 className="text-3xl font-outfit font-bold text-white drop-shadow-md">
+                                        {loading ? <span className="animate-pulse">...</span> : card.count.toLocaleString()}
+                                    </h3>
+                                </div>
+                                <div className={`w-12 h-12 rounded-xl flex items-center justify-center border border-white/5 ${card.bgGlow}`}>
+                                    {card.icon}
                                 </div>
                             </div>
-
-                            {/* Decorative accent line */}
-                            <div className={`absolute bottom-0 left-0 h-1 w-0 group-hover:w-full transition-all duration-700 ease-out bg-current ${card.textClass}`}></div>
                         </motion.div>
                     ))}
                 </div>
+
+                {/* Time-Series Graphs */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="glass-panel rounded-2xl border border-white/10 overflow-hidden shadow-2xl relative"
+                >
+                    <div className="px-6 py-5 border-b border-white/10 bg-black/40 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
+                                <LineChart size={20} className="text-purple-400" />
+                            </div>
+                            <div>
+                                <h4 className="font-bold text-white font-outfit text-lg">Growth Analytics</h4>
+                                <p className="text-xs text-textSec font-medium">Platform adoption over time</p>
+                            </div>
+                        </div>
+
+                        {/* Period Toggle */}
+                        <div className="flex items-center bg-black/50 border border-white/10 p-1 rounded-xl">
+                            {(['1d', '7d', '30d', '6m', '12m'] as Period[]).map(p => (
+                                <button
+                                    key={p}
+                                    onClick={() => setPeriod(p)}
+                                    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${period === p
+                                            ? 'bg-accentGlow text-darkBg shadow-[0_0_10px_rgba(0,240,255,0.4)]'
+                                            : 'text-textSec hover:text-white hover:bg-white/5'
+                                        }`}
+                                >
+                                    {p.toUpperCase()}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="p-6 md:p-8 grid md:grid-cols-2 gap-8 bg-black/20">
+                        {/* Users Graph */}
+                        <div className="relative">
+                            <h5 className="text-sm font-bold text-pink-400 mb-6 flex items-center gap-2">
+                                New Signups
+                                {loadingSeries && <Loader2 size={12} className="animate-spin text-textSec" />}
+                            </h5>
+                            <div className="h-48 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={timeSeries.user_growth} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#ec4899" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#ec4899" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                        <XAxis
+                                            dataKey="timestamp"
+                                            tickFormatter={formatTooltipLabel}
+                                            stroke="rgba(255,255,255,0.2)"
+                                            tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+                                            tickMargin={10}
+                                        />
+                                        <YAxis
+                                            stroke="rgba(255,255,255,0.2)"
+                                            tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+                                            allowDecimals={false}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                            labelFormatter={formatTooltipLabel}
+                                            itemStyle={{ color: '#ec4899', fontWeight: 'bold' }}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="value"
+                                            name="Signups"
+                                            stroke="#ec4899"
+                                            strokeWidth={3}
+                                            fillOpacity={1}
+                                            fill="url(#colorUsers)"
+                                            animationDuration={1500}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Active Users Graph */}
+                        <div className="relative">
+                            <h5 className="text-sm font-bold text-emerald-400 mb-6 flex items-center gap-2">
+                                Active Users
+                                {loadingSeries && <Loader2 size={12} className="animate-spin text-textSec" />}
+                            </h5>
+                            <div className="h-48 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={timeSeries.active_users} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorActiveUsers" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                        <XAxis
+                                            dataKey="timestamp"
+                                            tickFormatter={formatTooltipLabel}
+                                            stroke="rgba(255,255,255,0.2)"
+                                            tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+                                            tickMargin={10}
+                                        />
+                                        <YAxis
+                                            stroke="rgba(255,255,255,0.2)"
+                                            tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+                                            allowDecimals={false}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                            labelFormatter={formatTooltipLabel}
+                                            itemStyle={{ color: '#10b981', fontWeight: 'bold' }}
+                                        />
+                                        <Area
+                                            type="stepAfter"
+                                            dataKey="value"
+                                            name="Engaged"
+                                            stroke="#10b981"
+                                            strokeWidth={3}
+                                            fillOpacity={1}
+                                            fill="url(#colorActiveUsers)"
+                                            animationDuration={1500}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Documents Graph */}
+                        <div className="relative">
+                            <h5 className="text-sm font-bold text-cyan-400 mb-6 flex items-center gap-2">
+                                Documents Ingested
+                                {loadingSeries && <Loader2 size={12} className="animate-spin text-textSec" />}
+                            </h5>
+                            <div className="h-48 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={timeSeries.document_growth} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorDocs" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                        <XAxis
+                                            dataKey="timestamp"
+                                            tickFormatter={formatTooltipLabel}
+                                            stroke="rgba(255,255,255,0.2)"
+                                            tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+                                            tickMargin={10}
+                                        />
+                                        <YAxis
+                                            stroke="rgba(255,255,255,0.2)"
+                                            tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+                                            allowDecimals={false}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                            labelFormatter={formatTooltipLabel}
+                                            itemStyle={{ color: '#22d3ee', fontWeight: 'bold' }}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="value"
+                                            name="Documents"
+                                            stroke="#22d3ee"
+                                            strokeWidth={3}
+                                            fillOpacity={1}
+                                            fill="url(#colorDocs)"
+                                            animationDuration={1500}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* AI Queries Graph */}
+                        <div className="relative">
+                            <h5 className="text-sm font-bold text-purple-400 mb-6 flex items-center gap-2">
+                                <Cpu size={16} className="text-purple-400" /> AI Queries
+                                {loadingSeries && <Loader2 size={12} className="animate-spin text-textSec" />}
+                            </h5>
+                            <div className="h-48 w-full">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={timeSeries.ai_queries} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                                        <defs>
+                                            <linearGradient id="colorAi" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
+                                                <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                        <XAxis
+                                            dataKey="timestamp"
+                                            tickFormatter={formatTooltipLabel}
+                                            stroke="rgba(255,255,255,0.2)"
+                                            tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+                                            tickMargin={10}
+                                        />
+                                        <YAxis
+                                            stroke="rgba(255,255,255,0.2)"
+                                            tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
+                                            allowDecimals={false}
+                                        />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px' }}
+                                            labelFormatter={formatTooltipLabel}
+                                            itemStyle={{ color: '#a855f7', fontWeight: 'bold' }}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="value"
+                                            name="Queries"
+                                            stroke="#a855f7"
+                                            strokeWidth={3}
+                                            fillOpacity={1}
+                                            fill="url(#colorAi)"
+                                            animationDuration={1500}
+                                        />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                    </div>
+                </motion.div>
 
                 {/* Tech Info Panel */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="glass-panel mt-8 rounded-2xl border border-white/10 overflow-hidden shadow-2xl relative"
+                    className="glass-panel rounded-2xl border border-white/10 overflow-hidden shadow-2xl relative"
                 >
-                    <div className="absolute right-0 top-0 w-64 h-64 bg-accentGlow/5 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
-
                     <div className="px-6 py-5 border-b border-white/10 bg-black/40 backdrop-blur-md flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-accentGlow/10 border border-accentGlow/20 flex items-center justify-center shadow-[0_0_15px_rgba(0,240,255,0.15)]">
