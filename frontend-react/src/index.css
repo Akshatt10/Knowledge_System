@@ -4,9 +4,21 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --dark-bg: #050508;
+  --panel-bg: rgba(10, 10, 15, 0.7);
+  --text-main: #f0f0f5;
+  --text-sec: #9ba1b0;
+  --accent-glow: #00f0ff;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(10, 10, 15, 0.7);
+}
+
 @layer base {
   body {
     @apply bg-darkBg text-textMain font-inter overflow-hidden h-screen;
+    background-color: var(--dark-bg);
+    color: var(--text-main);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }

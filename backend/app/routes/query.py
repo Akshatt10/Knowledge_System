@@ -5,8 +5,9 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, HTTPException, Depends
-from app.services.auth import get_current_user
+from app.services.auth import get_current_user, get_db
 from app.models.database import User
+from sqlalchemy.orm import Session
 
 from app.models.schemas import QueryRequest, QueryResponse, SourceCitation
 from app.services.rag import rag_service
@@ -18,7 +19,8 @@ router = APIRouter(tags=["Query"])
 @router.post("/query", response_model=QueryResponse)
 async def ask_question(
     payload: QueryRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     """Submit a question to the RAG engine (Authenticated users only)."""
     try:
@@ -26,7 +28,9 @@ async def ask_question(
             question=payload.question,
             user_id=str(current_user.id),
             chat_history=payload.chat_history,
-            provider=payload.provider
+            provider=payload.provider,
+            folder_id=payload.folder_id,
+            db=db
         )
     except Exception as exc:
         logger.exception("RAG query failed")

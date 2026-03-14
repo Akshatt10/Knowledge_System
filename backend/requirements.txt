@@ -30,3 +30,6 @@ google-auth-oauthlib
 google-api-python-client
 requests
 slack-sdk
+redis
+gunicorn
+livekit-api

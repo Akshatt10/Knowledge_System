@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 
 interface User {
     id: string;
@@ -18,24 +18,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+interface AuthState {
+    token: string | null;
+    user: User | null;
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-    const [user, setUser] = useState<User | null>(() => {
+    const [authState, setAuthState] = useState<AuthState>(() => {
         const savedToken = localStorage.getItem('token');
         const savedRole = localStorage.getItem('role');
         const savedEmail = localStorage.getItem('email');
         const savedName = localStorage.getItem('name');
+        
         if (savedToken && savedRole && savedEmail) {
-            return { id: '', email: savedEmail, role: savedRole as 'USER' | 'ADMIN', name: savedName || undefined };
+            return {
+                token: savedToken,
+                user: { id: '', email: savedEmail, role: savedRole as 'USER' | 'ADMIN', name: savedName || undefined }
+            };
         }
-        return null;
+        return { token: null, user: null };
     });
-
-    useEffect(() => {
-        if (!token) {
-            setUser(null);
-        }
-    }, [token]);
 
     const login = (newToken: string, role: string, email: string, name?: string) => {
         localStorage.setItem('token', newToken);
@@ -45,8 +47,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         sessionStorage.clear();
 
-        setToken(newToken);
-        setUser({ id: '', email, role: role as 'USER' | 'ADMIN', name });
+        setAuthState({
+            token: newToken,
+            user: { id: '', email, role: role as 'USER' | 'ADMIN', name }
+        });
     };
 
     const logout = () => {
@@ -57,15 +61,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         sessionStorage.clear();
 
-        setToken(null);
-        setUser(null);
+        setAuthState({ token: null, user: null });
     };
 
-    const isAuthenticated = !!token;
-    const isAdmin = user?.role === 'ADMIN';
+    const isAuthenticated = !!authState.token;
+    const isAdmin = authState.user?.role === 'ADMIN';
 
     return (
-        <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated, isAdmin }}>
+        <AuthContext.Provider value={{ 
+            user: authState.user, 
+            token: authState.token, 
+            login, 
+            logout, 
+            isAuthenticated, 
+            isAdmin 
+        }}>
             {children}
         </AuthContext.Provider>
     );
