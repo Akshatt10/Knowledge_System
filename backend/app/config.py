@@ -100,5 +100,34 @@ class Settings(BaseSettings):
     # ─────────────────────────────────────
     CORS_ORIGINS: list[str] = ["*"]
 
+    # ─────────────────────────────────────
+    # Connectors (Google Drive)
+    # ─────────────────────────────────────
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/connectors/google/callback"
+    FRONTEND_URL: str = "http://localhost:5173"
+
+    # ─────────────────────────────────────
+    # Connectors (Notion)
+    # ─────────────────────────────────────
+    NOTION_CLIENT_ID: str = ""
+    NOTION_CLIENT_SECRET: str = ""
+    NOTION_REDIRECT_URI: str = "http://localhost:8000/api/connectors/notion/callback"
+
+    # ─────────────────────────────────────
+    # Connectors (Slack)
+    # ─────────────────────────────────────
+    SLACK_CLIENT_ID: str = ""
+    SLACK_CLIENT_SECRET: str = ""
+    SLACK_REDIRECT_URI: str = "http://localhost:8000/api/connectors/slack/callback"
+
+    # ─────────────────────────────────────
+    # Connectors (GitHub)
+    # ─────────────────────────────────────
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+    GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/connectors/github/callback"
+
 
 settings = Settings()

@@ -46,11 +46,8 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
             detail="Password must be at least 6 characters.",
         )
 
-    # Securely hash password
     hashed_password = get_password_hash(user_in.password)
     user_id = str(uuid.uuid4())
-
-    # Force default role to USER for public registration
     role = "USER"
 
     db_user = User(
@@ -63,7 +60,6 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
 
-    # Generate token
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
         data={"sub": db_user.id, "role": db_user.role},
@@ -74,7 +70,6 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()):
-    # OAuth2 uses "username" for the field name
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user:
         raise HTTPException(

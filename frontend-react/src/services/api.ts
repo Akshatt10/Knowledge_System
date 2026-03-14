@@ -83,6 +83,7 @@ export const adminService = {
     updateUser: (id: string, data: { role?: string; is_active?: boolean }) =>
         api.patch(`/admin/users/${id}`, data),
     deleteUser: (id: string) => api.delete(`/admin/users/${id}`),
+    getTimeSeriesStats: (period: string) => api.get(`/admin/stats/time-series?period=${period}`),
 };
 
 // Room / Multiplayer Services
@@ -96,6 +97,25 @@ export const roomService = {
         api.post(`/rooms/${roomId}/documents?document_id=${documentId}`),
     getRoomDocuments: (roomId: string) => api.get(`/rooms/${roomId}/documents`),
     leaveRoom: (roomId: string) => api.delete(`/rooms/${roomId}/leave`)
+};
+
+export const connectorService = {
+    getGoogleAuthUrl: () => api.get('/connectors/google/auth'),
+    listConnections: () => api.get('/connectors'),
+    listDriveFiles: () => api.get('/connectors/google/files'),
+    syncGoogle: (fileIds: string[]) => api.post('/connectors/google/sync', { file_ids: fileIds }),
+    getNotionAuthUrl: () => api.get('/connectors/notion/auth'),
+    listNotionPages: () => api.get('/connectors/notion/files'),
+    syncNotion: (fileIds: string[]) => api.post('/connectors/notion/sync', { file_ids: fileIds }),
+    // Slack
+    getSlackAuthUrl: () => api.get('/connectors/slack/auth'),
+    listSlackChannels: () => api.get('/connectors/slack/files'),
+    syncSlack: (fileIds: string[]) => api.post('/connectors/slack/sync', { file_ids: fileIds }),
+    // GitHub
+    getGitHubAuthUrl: () => api.get('/connectors/github/auth'),
+    listGitHubFiles: () => api.get('/connectors/github/files'),
+    syncGitHub: (fileIds: string[]) => api.post('/connectors/github/sync', { file_ids: fileIds }),
+    disconnect: (accountId: string) => api.delete(`/connectors/${accountId}`),
 };
 
 

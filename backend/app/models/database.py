@@ -65,3 +65,16 @@ class ChatMessage(Base):
     sender_id = Column(String(36), index=True, nullable=True)  # NULL = AI response
     content = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ConnectedAccount(Base):
+    __tablename__ = "connected_accounts"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), index=True, nullable=False)
+    provider = Column(String(50), nullable=False)
+    access_token = Column(String, nullable=False)
+    refresh_token = Column(String, nullable=False)
+    token_expiry = Column(DateTime, nullable=True)
+    connected_at = Column(DateTime, default=datetime.utcnow)
+    last_synced_at = Column(DateTime, nullable=True)

@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import Chat from './pages/Chat';
 import KnowledgeBase from './pages/KnowledgeBase';
+import Connectors from './pages/Connectors';
 import AdminStats from './pages/AdminStats';
 import UserManagement from './pages/UserManagement';
 import { WebSocketProvider } from './context/WebSocketContext';
@@ -44,6 +45,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <MainLayout><KnowledgeBase /></MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/connectors"
+              element={
+                <ProtectedRoute>
+                  <MainLayout><Connectors /></MainLayout>
                 </ProtectedRoute>
               }
             />

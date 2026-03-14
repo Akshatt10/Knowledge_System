@@ -52,11 +52,13 @@ def create_app() -> FastAPI:
     from app.routes.admin import router as admin_router
     from app.routes.auth import router as auth_router
     from app.routes.multiplayer import router as multiplayer_router
+    from app.routes.connectors import router as connectors_router
 
     app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
     app.include_router(documents_router, prefix="/api")
     app.include_router(query_router, prefix="/api")
     app.include_router(admin_router, prefix="/api")
     app.include_router(multiplayer_router, prefix="/api", tags=["multiplayer"])
+    app.include_router(connectors_router, prefix="/api/connectors")
 
     return app

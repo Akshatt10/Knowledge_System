@@ -37,7 +37,8 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str, user_i
         "pdf": PyPDFLoader,
         "txt": TextLoader,
         "docx": Docx2txtLoader,
-        "json": TextLoader
+        "json": TextLoader,
+        "md": TextLoader
     }
 
     loader_class = loader_map.get(file_type.lower())
