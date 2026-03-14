@@ -47,6 +47,7 @@ class DocumentInfo(BaseModel):
     chunk_count: int
     uploaded_at: str
     file_type: str
+    folder_id: str | None = None
 
 
 class DocumentListResponse(BaseModel):
@@ -63,6 +64,28 @@ class DeleteResponse(BaseModel):
     document_id: str
 
 
+# ── Folder Endpoints ───────────────────────────────────────────────────
+
+
+class FolderCreate(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+
+
+class FolderInfo(BaseModel):
+    id: str
+    name: str
+    created_at: str
+
+
+class FolderListResponse(BaseModel):
+    folders: list[FolderInfo]
+
+
+class MoveToFolderRequest(BaseModel):
+    document_ids: list[str]
+    folder_id: str | None = None
+
+
 # ── Query Endpoints ────────────────────────────────────────────────────
 
 
@@ -75,6 +98,7 @@ class QueryRequest(BaseModel):
         default=None,
         description="Optional list of previous exchanges: [{role, content}, ...]",
     )
+    folder_id: str | None = Field(default=None, description="Optional folder to restrict the query to.")
 
 
 class SourceCitation(BaseModel):

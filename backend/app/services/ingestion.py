@@ -48,8 +48,10 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str, user_i
     loader = loader_class(str(file_path))
     raw_docs = loader.load()
 
-    if not raw_docs:
-        raise ValueError(f"No text could be extracted from '{filename}'.")
+    # Check for empty text content (scanned PDFs or empty files)
+    total_text = "".join([d.page_content for d in raw_docs]).strip()
+    if not raw_docs or not total_text:
+        raise ValueError(f"No text could be extracted from '{filename}'. It might be a scanned image or empty file.")
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.CHUNK_SIZE or 1000,

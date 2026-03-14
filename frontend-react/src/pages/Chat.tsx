@@ -12,10 +12,15 @@ import {
     CheckCircle2,
     User as UserIcon,
     PlusCircle,
-    FileBox
+    FileBox,
+    Video,
+    VideoOff,
+    Folder as FolderIcon,
+    ChevronDown
 } from 'lucide-react';
+import VideoRoom from '../components/Video/VideoRoom';
 import ReactMarkdown from 'react-markdown';
-import { queryService, roomService, documentService } from '../services/api';
+import { queryService, roomService, documentService, folderService } from '../services/api';
 import { useSearchParams } from 'react-router-dom';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useAuth } from '../context/AuthContext';
@@ -69,6 +74,12 @@ const Chat: React.FC = () => {
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [newRoomName, setNewRoomName] = useState('');
     const [activeRoomName, setActiveRoomName] = useState<string | null>(null);
+    const [showVideo, setShowVideo] = useState(false);
+    const [creatingRoom, setCreatingRoom] = useState(false);
+    
+    const [folders, setFolders] = useState<any[]>([]);
+    const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+    const [showFolderSelector, setShowFolderSelector] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -92,12 +103,21 @@ const Chat: React.FC = () => {
     useEffect(() => {
         let isMounted = true;
 
-        if (!roomId) {
-            disconnect();
-            return;
-        }
+        const loadGlobalData = async () => {
+            try {
+                const foldersRes = await folderService.getAll();
+                if (isMounted) setFolders(foldersRes.data.folders);
+            } catch (err) {
+                console.error("Failed to load folders", err);
+            }
+        };
 
         const initRoom = async () => {
+            if (!roomId) {
+                disconnect();
+                return;
+            }
+
             setLoading(true);
             try {
                 const res = await roomService.getHistory(roomId);
@@ -106,16 +126,16 @@ const Chat: React.FC = () => {
                 const roomsRes = await roomService.getUserRooms();
                 const roomInfo = roomsRes.data.rooms.find((r: any) => r.id === roomId);
                 if (isMounted && roomInfo) setActiveRoomName(roomInfo.name);
+                
+                if (isMounted) connectToRoom(roomId);
             } catch (err) {
                 console.error("Failed to load room data", err);
             } finally {
-                if (isMounted) {
-                    setLoading(false);
-                    connectToRoom(roomId);
-                }
+                if (isMounted) setLoading(false);
             }
         };
 
+        loadGlobalData();
         initRoom();
 
         return () => {
@@ -140,7 +160,10 @@ const Chat: React.FC = () => {
 
     const handleCreateGlobalRoom = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
+        if (creatingRoom) return;
+
         const finalName = newRoomName.trim() || 'My Collaboration Room';
+        setCreatingRoom(true);
         try {
             const res = await roomService.createRoom("", finalName);
             window.dispatchEvent(new Event('rooms-updated'));
@@ -148,6 +171,8 @@ const Chat: React.FC = () => {
             setShowRoomModal(false);
         } catch (err) {
             console.error("Failed to create unified room", err);
+        } finally {
+            setCreatingRoom(false);
         }
     };
 
@@ -213,7 +238,8 @@ const Chat: React.FC = () => {
             const res = await queryService.ask({
                 question,
                 chat_history: history,
-                provider
+                provider,
+                folder_id: selectedFolderId
             });
 
             const data = res.data;
@@ -245,7 +271,7 @@ const Chat: React.FC = () => {
                 <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-black/20 backdrop-blur-md z-20 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-success shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse"></div>
-                        <h3 className="text-lg font-outfit font-semibold flex items-center gap-2 text-white">
+                        <h3 className="text-lg font-outfit font-semibold flex items-center gap-2 text-textMain">
                             Nexus Intelligence
                             {isMultiplayer && activeRoomName && (
                                 <>
@@ -256,38 +282,96 @@ const Chat: React.FC = () => {
                         </h3>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 shadow-inner">
-                        <button
-                            onClick={() => setProvider('openai')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${provider === 'openai' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-white hover:bg-white/5'}`}
-                        >
-                            OPENAI
-                        </button>
-                        <button
-                            onClick={() => setProvider('gemini')}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${provider === 'gemini' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-white hover:bg-white/5'} mr-1`}
-                        >
-                            GEMINI
-                        </button>
-
+                    <div className="flex items-center gap-2">
+                        {/* Folder Selection for Querying */}
                         {!isMultiplayer && (
-                            <button
-                                onClick={handleOpenRoomModal}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accentSec/10 text-accentSec border border-accentSec/20 hover:bg-accentSec/20 hover:border-accentSec/40 transition-all duration-300 ml-1"
-                            >
-                                <Users size={14} /> Invite Friends
-                            </button>
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowFolderSelector(!showFolderSelector)}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                                        selectedFolderId 
+                                        ? 'bg-accentGlow/10 border-accentGlow/30 text-accentGlow shadow-glow' 
+                                        : 'bg-white/5 border-white/5 text-textSec hover:border-white/10'
+                                    }`}
+                                >
+                                    <FolderIcon size={14} />
+                                    {selectedFolderId ? folders.find(f => f.id === selectedFolderId)?.name : 'All Knowledge'}
+                                    <ChevronDown size={14} className={`transition-transform ${showFolderSelector ? 'rotate-180' : ''}`} />
+                                </button>
+                                
+                                {showFolderSelector && (
+                                    <>
+                                        <div className="fixed inset-0 z-20" onClick={() => setShowFolderSelector(false)}></div>
+                                        <div className="absolute right-0 top-10 z-30 bg-panelBg border border-white/10 rounded-xl shadow-2xl p-2 min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <div className="text-[0.6rem] uppercase tracking-widest text-textSec/60 mb-2 px-3 pt-1">Target Knowledge Source</div>
+                                            <button
+                                                onClick={() => {
+                                                    setSelectedFolderId(null);
+                                                    setShowFolderSelector(false);
+                                                }}
+                                                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                                                    selectedFolderId === null 
+                                                    ? 'bg-accentGlow/10 text-accentGlow' 
+                                                    : 'text-textSec hover:bg-white/5 hover:text-textMain'
+                                                }`}
+                                            >
+                                                Whole Knowledge Base
+                                            </button>
+                                            {folders.map(folder => (
+                                                <button
+                                                    key={folder.id}
+                                                    onClick={() => {
+                                                        setSelectedFolderId(folder.id);
+                                                        setShowFolderSelector(false);
+                                                    }}
+                                                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                                                        selectedFolderId === folder.id 
+                                                        ? 'bg-accentGlow/10 text-accentGlow' 
+                                                        : 'text-textSec hover:bg-white/5 hover:text-textMain'
+                                                    }`}
+                                                >
+                                                    {folder.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
                         )}
 
-                        {!isMultiplayer && (
+                        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 shadow-inner">
                             <button
-                                onClick={handleClearChat}
-                                title="Clear Chat"
-                                className="text-textSec hover:text-danger p-2 rounded-lg hover:bg-danger/10 transition-colors ml-1"
+                                onClick={() => setProvider('openai')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${provider === 'openai' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-textMain hover:bg-white/5'}`}
                             >
-                                <Trash2 size={16} />
+                                OPENAI
                             </button>
-                        )}
+                            <button
+                                onClick={() => setProvider('gemini')}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${provider === 'gemini' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-textMain hover:bg-white/5'} mr-1`}
+                            >
+                                GEMINI
+                            </button>
+
+                            {!isMultiplayer && (
+                                <button
+                                    onClick={handleOpenRoomModal}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accentSec/10 text-accentSec border border-accentSec/20 hover:bg-accentSec/20 hover:border-accentSec/40 transition-all duration-300 ml-1"
+                                >
+                                    <Users size={14} /> Invite Friends
+                                </button>
+                            )}
+
+                            {!isMultiplayer && (
+                                <button
+                                    onClick={handleClearChat}
+                                    title="Clear Chat"
+                                    className="text-textSec hover:text-danger p-2 rounded-lg hover:bg-danger/10 transition-colors ml-1"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -317,6 +401,24 @@ const Chat: React.FC = () => {
                                 <FileBox size={14} /> Shared Vault
                             </button>
                             <button
+                                onClick={() => setShowVideo(!showVideo)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all duration-500 relative group overflow-hidden ${
+                                    showVideo 
+                                    ? 'bg-danger/20 text-danger border-danger/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]' 
+                                    : 'bg-success/10 text-success border-success/20 hover:bg-success/20 hover:border-success/40'
+                                }`}
+                            >
+                                {!showVideo && <div className="absolute inset-0 bg-success/20 animate-ping opacity-20 pointer-events-none"></div>}
+                                {showVideo ? (
+                                    <motion.div initial={{ rotate: 0 }} animate={{ rotate: 180 }} transition={{ duration: 0.5 }}>
+                                        <VideoOff size={16} />
+                                    </motion.div>
+                                ) : (
+                                    <Video size={16} className="group-hover:scale-110 transition-transform" />
+                                )}
+                                <span className="relative z-10">{showVideo ? 'End Call' : 'Join Video'}</span>
+                            </button>
+                            <button
                                 onClick={async () => {
                                     if (roomId) {
                                         try {
@@ -344,7 +446,7 @@ const Chat: React.FC = () => {
                             const isSystem = msg.role === 'system';
                             const content = msg.content;
                             const isMe = msg.sender === user?.email.split('@')[0];
-                            const senderName = isUser ? (isMe ? 'You' : msg.sender) : (isSystem ? 'System' : 'Nexus AI');
+                            const senderName = isUser ? (isMe ? 'You' : msg.sender) : (isSystem ? 'System' : 'Intelligence Agent');
                             const isRightSide = isUser && (!isMultiplayer || isMe);
 
                             if (isSystem) {
@@ -375,11 +477,11 @@ const Chat: React.FC = () => {
 
                                     <div className={`flex gap-3 md:gap-4 ${isRightSide ? 'flex-row-reverse' : 'flex-row'}`}>
                                         <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center shadow-md ${!isUser ? 'bg-accentGlow/10 border border-accentGlow/30' : 'bg-white/5 border border-white/10'}`}>
-                                            {!isUser ? <Sparkles size={20} className="text-accentGlow drop-shadow-glow" /> : <UserIcon size={20} className="text-white/80" />}
+                                            {!isUser ? <Sparkles size={20} className="text-accentGlow drop-shadow-glow" /> : <UserIcon size={20} className="text-textMain/80" />}
                                         </div>
 
                                         <div className={`group relative p-5 rounded-2xl border ${isRightSide ? 'bg-accentSec/10 border-accentSec/30 rounded-tr-sm backdrop-blur-md' : 'bg-black/40 border-white/10 rounded-tl-sm backdrop-blur-md hover:border-white/20 transition-colors'}`}>
-                                            <div className="markdown-content text-[0.95rem] text-white/90 leading-relaxed">
+                                            <div className="markdown-content text-[0.95rem] text-textMain/90 leading-relaxed">
                                                 <ReactMarkdown>{msg.content}</ReactMarkdown>
                                             </div>
 
@@ -393,7 +495,7 @@ const Chat: React.FC = () => {
                                                         {msg.sources.map((src: any, j: number) => (
                                                             <div key={j} className="bg-black/50 p-3.5 border-l-2 border-accentGlow rounded-r-lg text-sm border-t border-b border-r border-white/5 hover:bg-black/70 transition-colors">
                                                                 <div className="flex justify-between items-center mb-2">
-                                                                    <strong className="flex items-center gap-2 text-white/80 shrink-0 min-w-0 pr-2">
+                                                                    <strong className="flex items-center gap-2 text-textMain/80 shrink-0 min-w-0 pr-2">
                                                                         <FileText size={14} className="shrink-0 text-textSec" />
                                                                         <span className="truncate">{src.filename}</span>
                                                                     </strong>
@@ -433,7 +535,7 @@ const Chat: React.FC = () => {
                 <div className="p-4 md:p-6 border-t border-white/10 bg-black/20 backdrop-blur-xl shrink-0 z-20">
                     <form onSubmit={handleSend} className="max-w-[1000px] mx-auto relative group">
                         <div className="absolute -inset-1 bg-accent-gradient rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                        <div className="relative flex gap-3 items-end bg-black rounded-xl p-2 border border-white/10 focus-within:border-accentGlow/50 transition-colors shadow-lg">
+                        <div className="relative flex gap-3 items-end bg-panelBg rounded-xl p-2 border border-white/10 focus-within:border-accentGlow/50 transition-colors shadow-lg">
                             <textarea
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
@@ -444,8 +546,8 @@ const Chat: React.FC = () => {
                                     }
                                 }}
                                 disabled={isMultiplayer && !isConnected}
-                                placeholder={isMultiplayer && !isConnected ? "Connecting to multiplayer room..." : isMultiplayer ? "Type @ai to ask the Agent... or just chat here" : "Query the knowledge base... (Shift+Enter for newline)"}
-                                className="flex-1 bg-transparent border-none text-white p-3 resize-none h-14 max-h-[200px] text-[0.95rem] outline-none placeholder:text-textSec/50 custom-scrollbar disabled:opacity-50"
+                                placeholder={isMultiplayer && !isConnected ? "Connecting to multiplayer room..." : isMultiplayer ? "Type @ai to ask the Agent... or just chat here" : "Query the knowledge base..."}
+                                className="flex-1 bg-transparent border-none text-textMain p-3 resize-none h-14 max-h-[200px] text-[0.95rem] outline-none placeholder:text-textSec/50 custom-scrollbar disabled:opacity-50"
                             />
                             <button
                                 type="submit"
@@ -554,9 +656,17 @@ const Chat: React.FC = () => {
                                     </button>
                                     <button
                                         type="submit"
-                                        className="px-6 py-2.5 rounded-xl bg-accentSec text-white font-bold text-sm shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all"
+                                        disabled={creatingRoom || !newRoomName.trim()}
+                                        className="px-6 py-2.5 rounded-xl bg-accentSec text-white font-bold text-sm shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:shadow-[0_0_25px_rgba(59,130,246,0.6)] hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100 disabled:cursor-not-allowed flex items-center gap-2"
                                     >
-                                        Create Room
+                                        {creatingRoom ? (
+                                            <>
+                                                <Loader2 size={16} className="animate-spin" />
+                                                Creating...
+                                            </>
+                                        ) : (
+                                            'Create Room'
+                                        )}
                                     </button>
                                 </div>
                             </form>
@@ -564,6 +674,14 @@ const Chat: React.FC = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Video Overlay */}
+            {isMultiplayer && showVideo && roomId && (
+                <VideoRoom 
+                    roomName={roomId} 
+                    onClose={() => setShowVideo(false)} 
+                />
+            )}
         </div>
     );
 };

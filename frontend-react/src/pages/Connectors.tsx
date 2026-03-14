@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { connectorService } from '../services/api';
 import {
-    Plug,
     Trash2,
     ExternalLink,
     CheckCircle2,
@@ -16,7 +15,8 @@ import {
     Check,
     BookOpen,
     MessageSquare,
-    Github
+    Github,
+    Sparkles
 } from 'lucide-react';
 
 interface ConnectedAccount {
@@ -211,8 +211,22 @@ const Connectors: React.FC = () => {
                             {icon}
                         </div>
                         <div>
-                            <h3 className="text-lg font-semibold text-white">{label}</h3>
-                            <p className="text-xs text-textSec">{description}</p>
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-lg font-semibold text-textMain">{label}</h3>
+                                {provider === 'google_drive' && (
+                                    <div className="flex flex-col gap-1">
+                                        <span className="w-fit text-[0.6rem] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-tighter font-bold flex items-center gap-1">
+                                            <Sparkles size={10} /> Beta Test
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-xs text-textSec mb-1">{description}</p>
+                            {provider === 'google_drive' && (
+                                <p className="text-[0.65rem] text-amber-400/70 italic leading-tight max-w-[200px]">
+                                    App is currently unverified. Use for testing only.
+                                </p>
+                            )}
                         </div>
                     </div>
 
@@ -233,11 +247,11 @@ const Connectors: React.FC = () => {
                 </div>
 
                 {connected && account && (
-                    <div className="mt-4 pt-4 border-t border-white/5 space-y-4">
+                    <div className="mt-4 pt-4 border-t border-border space-y-4">
                         <div className="flex items-center justify-between text-sm">
                             <span className="text-textSec">
                                 Last synced:{' '}
-                                <span className="text-white/80">
+                                <span className="text-textMain/80">
                                     {account.last_synced_at
                                         ? new Date(account.last_synced_at).toLocaleString()
                                         : 'Never'}
@@ -286,7 +300,7 @@ const Connectors: React.FC = () => {
             <div className="max-w-3xl mx-auto">
                 <div className="flex items-center gap-3 mb-2">
                     <CloudCog size={32} className="text-accentGlow" />
-                    <h1 className="text-3xl font-outfit font-bold text-white">Connectors</h1>
+                    <h1 className="text-3xl font-outfit font-bold text-textMain">Connectors</h1>
                 </div>
                 <p className="text-textSec mb-8">
                     Connect external knowledge sources. Browse and select documents to import into your RAG pipeline.
@@ -365,14 +379,14 @@ const Connectors: React.FC = () => {
                                     className="glass-panel p-6 rounded-2xl"
                                 >
                                     <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-white font-semibold flex items-center gap-2">
+                                        <h3 className="text-textMain font-semibold flex items-center gap-2">
                                             <FileText size={18} className="text-accentGlow" />
                                             Your {pickerLabel} ({remoteFiles.length})
                                         </h3>
                                         <div className="flex items-center gap-3">
                                             <button
                                                 onClick={toggleAll}
-                                                className="text-xs text-textSec hover:text-white transition-colors"
+                                                className="text-xs text-textSec hover:text-textMain transition-colors"
                                             >
                                                 {selectedFiles.size === remoteFiles.length ? 'Deselect All' : 'Select All'}
                                             </button>
@@ -409,7 +423,7 @@ const Connectors: React.FC = () => {
                                                 </div>
                                                 <FileText size={16} className="text-textSec flex-shrink-0" />
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="text-sm text-white truncate">{file.name}</div>
+                                                    <div className="text-sm text-textMain truncate">{file.name}</div>
                                                     <div className="text-[0.65rem] text-textSec">
                                                         {FILE_TYPE_LABELS[file.mimeType] || 'File'}
                                                         {file.modifiedTime && ` · ${new Date(file.modifiedTime).toLocaleDateString()}`}
@@ -442,7 +456,7 @@ const Connectors: React.FC = () => {
                                     exit={{ opacity: 0 }}
                                     className="glass-panel p-6 rounded-2xl"
                                 >
-                                    <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                                    <h3 className="text-textMain font-semibold mb-3 flex items-center gap-2">
                                         <FolderSync size={18} className="text-accentGlow" />
                                         Import Results
                                     </h3>

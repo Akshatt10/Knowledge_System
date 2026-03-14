@@ -70,8 +70,17 @@ export const documentService = {
 
 // Query Services
 export const queryService = {
-    ask: (data: { question: string; provider: string; chat_history?: any[] }) =>
+    ask: (data: { question: string; provider: string; chat_history?: any[]; folder_id?: string | null }) =>
         api.post('/query', data),
+};
+
+// Folder Services
+export const folderService = {
+    create: (name: string) => api.post('/folders', { name }),
+    getAll: () => api.get('/folders'),
+    delete: (id: string) => api.delete(`/folders/${id}`),
+    moveDocuments: (documentIds: string[], folderId: string | null) => 
+        api.put('/folders/move-documents', { document_ids: documentIds, folder_id: folderId }),
 };
 
 // Admin Services

@@ -96,10 +96,29 @@ class RAGService:
         user_id: str,
         chat_history: list[dict[str, str]] | None = None,
         provider: str = "openai",
+        folder_id: str | None = None,
+        db: Session | None = None,
     ) -> dict:
         """Execute RAG pipeline and return grounded answer."""
 
         llm = self.get_llm(provider=provider)
+        
+        filter_dict = {}
+        if folder_id and db:
+            from app.models.database import Document
+            doc_ids = [d.id for d in db.query(Document).filter(
+                Document.folder_id == folder_id,
+                Document.user_id == user_id
+            ).all()]
+            
+            if not doc_ids:
+                # If folder is empty, we should return early or return empty docs
+                return {
+                    "answer": "This folder is empty. Please add some documents to it first.",
+                    "sources": [],
+                }
+            
+            filter_dict["document_id"] = {"$in": doc_ids}
 
         # Better retriever with MMR for diverse but relevant chunks
         retriever = vector_store.get_retriever(
@@ -109,6 +128,7 @@ class RAGService:
                 "k": 5,
                 "fetch_k": 15,
             },
+            filter_dict=filter_dict
         )
 
         # 1️⃣ Retrieve documents

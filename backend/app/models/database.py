@@ -16,6 +16,16 @@ class User(Base):
     role = Column(String(20), default="USER", nullable=False)  # "ADMIN" or "USER"
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
+class Folder(Base):
+    __tablename__ = "folders"
+
+    id = Column(String(36), primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    user_id = Column(String(36), index=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class Document(Base):
     __tablename__ = "documents"
 
@@ -24,6 +34,7 @@ class Document(Base):
     filename = Column(String(255), nullable=False)
     file_type = Column(String(50))
     chunk_count = Column(String(10), default="0")
+    folder_id = Column(String(36), index=True, nullable=True) # Optional folder grouping
     uploaded_at = Column(DateTime, default=datetime.utcnow)
     
     # Encryption & Backup Metadata

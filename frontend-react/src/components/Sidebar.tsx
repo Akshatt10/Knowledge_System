@@ -15,7 +15,7 @@ import {
 import { roomService } from '../services/api';
 
 const Sidebar: React.FC = () => {
-    const { user, logout, isAdmin } = useAuth();
+    const { user, logout, isAdmin, token } = useAuth();
     const navigate = useNavigate();
     const [rooms, setRooms] = React.useState<any[]>([]);
 
@@ -32,7 +32,7 @@ const Sidebar: React.FC = () => {
 
         window.addEventListener('rooms-updated', fetchRooms);
         return () => window.removeEventListener('rooms-updated', fetchRooms);
-    }, []);
+    }, [token]);
 
     const handleLogout = () => {
         logout();
@@ -57,7 +57,7 @@ const Sidebar: React.FC = () => {
 
             <div className="flex items-center gap-3 mb-10 pl-2">
                 <Sparkles size={28} className="text-accentGlow drop-shadow-glow" />
-                <h2 className="text-2xl font-outfit font-bold tracking-wide text-white">Nexus</h2>
+                <h2 className="text-2xl font-outfit font-bold tracking-wide text-textMain">Nexus</h2>
             </div>
 
             <nav className="flex-1 flex flex-col gap-2 overflow-y-auto pr-2">
@@ -68,7 +68,7 @@ const Sidebar: React.FC = () => {
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 relative overflow-hidden ${isActive
                                 ? 'text-accentGlow bg-accentGlow/10 shadow-[inset_0_0_20px_rgba(0,240,255,0.05)]'
-                                : 'text-textSec hover:text-white hover:bg-white/5'
+                                : 'text-textSec hover:text-textMain hover:bg-white/5'
                             }`
                         }
                     >
@@ -87,7 +87,7 @@ const Sidebar: React.FC = () => {
                 {/* SHARED SPACES SUBMENU */}
                 {rooms.length > 0 && (
                     <div className="mt-8">
-                        <div className="text-[0.7rem] text-white/30 uppercase tracking-widest font-semibold mb-3 pl-4">
+                        <div className="text-[0.7rem] text-textSec/60 uppercase tracking-widest font-semibold mb-3 pl-4">
                             Chat Rooms
                         </div>
                         <div className="flex flex-col gap-1">
@@ -98,7 +98,7 @@ const Sidebar: React.FC = () => {
                                     className={({ isActive }) =>
                                         `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 relative ${isActive
                                             ? 'text-accentGlow bg-accentGlow/5'
-                                            : 'text-textSec hover:text-white hover:bg-white/5'
+                                            : 'text-textSec hover:text-textMain hover:bg-white/5'
                                         }`
                                     }
                                 >
@@ -107,7 +107,7 @@ const Sidebar: React.FC = () => {
                                             {isActive && (
                                                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-accentGlow rounded-r-md shadow-glow"></div>
                                             )}
-                                            <Hash size={16} className={isActive ? "text-accentGlow drop-shadow-glow" : "text-white/40"} />
+                                            <Hash size={16} className={isActive ? "text-accentGlow drop-shadow-glow" : "text-textSec/40"} />
                                             <span className="truncate">{room.name}</span>
                                         </>
                                     )}
@@ -129,7 +129,7 @@ const Sidebar: React.FC = () => {
                                 className={({ isActive }) =>
                                     `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 relative ${isActive
                                         ? 'text-danger bg-danger/10 shadow-[inset_0_0_20px_rgba(255,77,77,0.05)]'
-                                        : 'text-textSec hover:text-white hover:bg-white/5'
+                                        : 'text-textSec hover:text-textMain hover:bg-white/5'
                                     }`
                                 }
                             >
@@ -148,13 +148,14 @@ const Sidebar: React.FC = () => {
                 )}
             </nav>
 
-            <div className="mt-auto pt-6 border-t border-white/10 flex items-center justify-between">
+
+            <div className="mt-auto pt-6 border-t border-textMain/10 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-accent-gradient flex items-center justify-center shadow-glow">
                         {isAdmin ? <ShieldCheck size={20} className="text-white" /> : <User size={20} className="text-white" />}
                     </div>
                     <div className="overflow-hidden max-w-[120px]">
-                        <div className="text-sm font-semibold truncate text-white">
+                        <div className="text-sm font-semibold truncate text-textMain">
                             {user?.name || user?.email.split('@')[0]}
                         </div>
                         <div className="text-[0.7rem] font-medium text-textSec uppercase tracking-wider">

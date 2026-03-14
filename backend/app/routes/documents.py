@@ -195,6 +195,7 @@ async def list_documents(
             chunk_count=int(float(d.chunk_count)) if d.chunk_count else 0,
             uploaded_at=d.uploaded_at.isoformat() if d.uploaded_at else "",
             file_type=d.file_type or "",
+            folder_id=d.folder_id,
         )
         for d in docs_raw
     ]

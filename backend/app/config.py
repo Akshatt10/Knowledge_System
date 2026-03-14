@@ -55,20 +55,37 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def assemble_db_connection(self) -> "Settings":
-        """Construct database URL from environment variables if not explicitly provided."""
-        if getattr(self, "DATABASE_URL", None):
-            url = self.DATABASE_URL
-            if url.startswith("postgres://"):
-                self.DATABASE_URL = url.replace("postgres://", "postgresql+psycopg://", 1)
-            elif url.startswith("postgresql://"):
-                self.DATABASE_URL = url.replace("postgresql://", "postgresql+psycopg://", 1)
-        else:
+        """Construct database URL from environment variables. 
+        If specific POSTGRES_* vars are provided, they take precedence over a generic DATABASE_URL 
+        to ensure local Docker setups work reliably.
+        """
+        # If any specific Postgres vars are provided in .env, rebuild the URL
+        # We check if they are different from the hardcoded defaults in the class
+        has_specific_db_vars = any([
+            self.POSTGRES_USER != "postgres",
+            self.POSTGRES_PASSWORD != "postgres",
+            self.POSTGRES_HOST != "localhost",
+            self.POSTGRES_PORT != 5432,
+            self.POSTGRES_DB != "postgres"
+        ])
+
+        if not self.DATABASE_URL or has_specific_db_vars:
             self.DATABASE_URL = (
                 f"postgresql+psycopg://{self.POSTGRES_USER}:"
                 f"{self.POSTGRES_PASSWORD}@{self.POSTGRES_HOST}:"
                 f"{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
             )
+        else:
+            # Handle string normalization for DATABASE_URL if it was provided directly
+            url = self.DATABASE_URL
+            if url.startswith("postgres://"):
+                self.DATABASE_URL = url.replace("postgres://", "postgresql+psycopg://", 1)
+            elif url.startswith("postgresql://"):
+                self.DATABASE_URL = url.replace("postgresql://", "postgresql+psycopg://", 1)
+                
         return self
+    
+    DB_ENGINE: str = "postgresql+psycopg" # Added for compatibility
 
     # ─────────────────────────────────────
     # AWS / S3 / MinIO
@@ -128,6 +145,18 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_ID: str = ""
     GITHUB_CLIENT_SECRET: str = ""
     GITHUB_REDIRECT_URI: str = "http://localhost:8000/api/connectors/github/callback"
+
+    # ─────────────────────────────────────
+    # LiveKit (Video Calling)
+    # ─────────────────────────────────────
+    LIVEKIT_API_KEY: str = ""
+    LIVEKIT_API_SECRET: str = ""
+    LIVEKIT_URL: str = ""
+
+    # ─────────────────────────────────────
+    # Redis (Job Queue Storage)
+    # ─────────────────────────────────────
+    REDIS_URL: str = "redis://:FlyH1gherRedis!@localhost:6379/0"
 
 
 settings = Settings()
