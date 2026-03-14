@@ -29,9 +29,9 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           
-          # Use docker-compose to rebuild and restart the entire stack
+          # Use docker compose to rebuild and restart the entire stack
           # This ensures database, redis, and backend are all managed together
-          docker-compose up -d --build
+          docker compose up -d --build
           
           # Clean up unused docker images to save EBS volumes storage
           docker image prune -f
