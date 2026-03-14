@@ -29,21 +29,9 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
           
-          # Navigate to backend directory
-          cd backend
-          
-          # Stop the existing container
-          docker rm -f nexus-api || true
-          
-          # Build the new Docker image locally on the EC2 instance
-          docker build -t nexus-backend .
-          
-          # Run the new container, passing the existing .env file
-          docker run -d --name nexus-api \
-            -p 8000:8000 \
-            --env-file .env \
-            --restart unless-stopped \
-            nexus-backend
+          # Use docker-compose to rebuild and restart the entire stack
+          # This ensures database, redis, and backend are all managed together
+          docker-compose up -d --build
           
           # Clean up unused docker images to save EBS volumes storage
           docker image prune -f
