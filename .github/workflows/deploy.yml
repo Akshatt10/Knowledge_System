@@ -31,7 +31,7 @@ jobs:
           
           # Use docker compose to rebuild and restart the entire stack
           # This ensures database, redis, and backend are all managed together
-          docker compose up -d --build
+          docker compose up -d --build --remove-orphans
           
           # Clean up unused docker images to save EBS volumes storage
           docker image prune -f
