@@ -17,6 +17,7 @@ from app.config import settings
 from app.models.database import ConnectedAccount, Document
 from app.services.connectors.base import BaseConnector
 from app.services.ingestion import ingest_document
+from app.services.session_store import session_store
 
 logger = logging.getLogger(__name__)
 
@@ -34,13 +35,11 @@ MAX_FILES_PER_REPO = 1000
 
 
 class GitHubConnector(BaseConnector):
-
-    def __init__(self):
-        self._pending_states: dict[str, str] = {}
+    pass
 
     def get_auth_url(self, user_id: str) -> str:
         state = str(uuid.uuid4())
-        self._pending_states[state] = user_id
+        session_store.set_verifier(state, user_id)
 
         params = {
             "client_id": settings.GITHUB_CLIENT_ID,
@@ -51,7 +50,7 @@ class GitHubConnector(BaseConnector):
         return f"{GITHUB_AUTH_URL}?{urlencode(params)}"
 
     def resolve_user_from_state(self, state: str) -> str:
-        user_id = self._pending_states.pop(state, None)
+        user_id = session_store.get_verifier(state)
         if not user_id:
             raise ValueError("Invalid or expired OAuth state.")
         return user_id

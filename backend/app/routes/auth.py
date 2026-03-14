@@ -14,10 +14,9 @@ from app.services.auth import (
     create_access_token
 )
 from app.config import settings
+from app.services.session_store import session_store
 
 router = APIRouter()
-
-_google_sso_verifiers: dict[str, str] = {}
 
 
 class UserCreate(BaseModel):
@@ -123,7 +122,7 @@ def google_sso_redirect():
     )
 
     if hasattr(flow, "code_verifier") and flow.code_verifier:
-        _google_sso_verifiers["sso_login"] = flow.code_verifier
+        session_store.set_verifier("sso_login", flow.code_verifier)
 
     return {"auth_url": auth_url}
 
@@ -151,7 +150,7 @@ def google_sso_callback(code: str, state: str = "sso_login", db: Session = Depen
             redirect_uri=settings.GOOGLE_REDIRECT_URI.replace("/connectors/", "/auth/"),
         )
 
-        code_verifier = _google_sso_verifiers.pop(state, None)
+        code_verifier = session_store.get_verifier(state)
         flow.fetch_token(code=code, code_verifier=code_verifier)
         creds = flow.credentials
 
