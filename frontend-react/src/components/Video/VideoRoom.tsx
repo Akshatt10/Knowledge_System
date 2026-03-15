@@ -62,6 +62,10 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ roomName, onClose }) => {
         <AnimatePresence>
             <motion.div 
                 layout
+                drag={!isMaximized}
+                dragMomentum={false}
+                dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+                dragElastic={0.1}
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ 
                     opacity: 1, 
@@ -69,10 +73,10 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ roomName, onClose }) => {
                     y: 0,
                     width: isMaximized ? 'calc(100% - 32px)' : 420,
                     height: isMaximized ? 'calc(100% - 32px)' : 320,
-                    top: isMaximized ? 16 : 'auto',
-                    left: isMaximized ? 16 : 'auto',
-                    right: isMaximized ? 'auto' : 24,
-                    bottom: isMaximized ? 'auto' : 96
+                    top: isMaximized ? 16 : undefined,
+                    left: isMaximized ? 16 : undefined,
+                    right: isMaximized ? undefined : 24,
+                    bottom: isMaximized ? undefined : 96
                 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}

@@ -32,8 +32,6 @@ MAX_MESSAGES_PER_CHANNEL = 200
 
 
 class SlackConnector(BaseConnector):
-    pass
-
     def get_auth_url(self, user_id: str) -> str:
         state = str(uuid.uuid4())
         session_store.set_verifier(state, user_id)

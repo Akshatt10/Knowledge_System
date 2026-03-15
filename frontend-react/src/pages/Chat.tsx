@@ -20,18 +20,13 @@ import {
 } from 'lucide-react';
 import VideoRoom from '../components/Video/VideoRoom';
 import ReactMarkdown from 'react-markdown';
-import { queryService, roomService, documentService, folderService } from '../services/api';
+import { roomService, documentService, folderService } from '../services/api';
 import { useSearchParams } from 'react-router-dom';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useAuth } from '../context/AuthContext';
+import { useChat } from '../context/ChatContext';
 
-interface Message {
-    role: 'user' | 'ai' | 'system';
-    content: string;
-    sources?: any[];
-    id?: string;
-    sender?: string;
-}
+
 
 const Chat: React.FC = () => {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -49,21 +44,18 @@ const Chat: React.FC = () => {
         setInitialHistory
     } = useWebSocket();
 
-    const [localMessages, setLocalMessages] = useState<Message[]>(() => {
-        const saved = sessionStorage.getItem('chat_messages');
-        return saved ? JSON.parse(saved) : [
-            { role: 'ai', content: "Hello! I am your advanced RAG Intelligence Agent. I can analyze documents from our secure knowledge base. What would you like to know?" }
-        ];
-    });
+    const { 
+        localMessages, 
+        loading: queryLoading, 
+        provider, 
+        setProvider, 
+        sendQuery, 
+        clearChat,
+        selectedFolderId,
+        setSelectedFolderId
+    } = useChat();
+
     const [input, setInput] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [provider, setProvider] = useState(() => {
-        return sessionStorage.getItem('chat_provider') || 'gemini';
-    });
-    const [history, setHistory] = useState<any[]>(() => {
-        const saved = sessionStorage.getItem('chat_history');
-        return saved ? JSON.parse(saved) : [];
-    });
     const [copied, setCopied] = useState(false);
 
     const [showVault, setShowVault] = useState(false);
@@ -78,27 +70,18 @@ const Chat: React.FC = () => {
     const [creatingRoom, setCreatingRoom] = useState(false);
     
     const [folders, setFolders] = useState<any[]>([]);
-    const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
     const [showFolderSelector, setShowFolderSelector] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const isMultiplayer = !!roomId;
-    const displayMessages = isMultiplayer ? wsMessages : localMessages as any[];
+    const displayMessages = isMultiplayer ? wsMessages : localMessages;
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     useEffect(scrollToBottom, [displayMessages]);
-
-    useEffect(() => {
-        if (!isMultiplayer) {
-            sessionStorage.setItem('chat_messages', JSON.stringify(localMessages));
-            sessionStorage.setItem('chat_history', JSON.stringify(history));
-            sessionStorage.setItem('chat_provider', provider);
-        }
-    }, [localMessages, history, provider, isMultiplayer]);
 
     useEffect(() => {
         let isMounted = true;
@@ -118,7 +101,6 @@ const Chat: React.FC = () => {
                 return;
             }
 
-            setLoading(true);
             try {
                 const res = await roomService.getHistory(roomId);
                 if (isMounted) setInitialHistory(res.data.messages);
@@ -127,11 +109,12 @@ const Chat: React.FC = () => {
                 const roomInfo = roomsRes.data.rooms.find((r: any) => r.id === roomId);
                 if (isMounted && roomInfo) setActiveRoomName(roomInfo.name);
                 
-                if (isMounted) connectToRoom(roomId);
+                if (isMounted) {
+                    connectToRoom(roomId);
+                    window.dispatchEvent(new Event('rooms-updated'));
+                }
             } catch (err) {
                 console.error("Failed to load room data", err);
-            } finally {
-                if (isMounted) setLoading(false);
             }
         };
 
@@ -145,12 +128,8 @@ const Chat: React.FC = () => {
     }, [roomId, connectToRoom, disconnect, setInitialHistory]);
 
     const handleClearChat = () => {
-        if (isMultiplayer) return; // Cannot clear server history from here
-        const initialMessage: Message = { role: 'ai', content: "Hello! I am your advanced RAG Intelligence Agent. I can analyze documents from our secure knowledge base. What would you like to know?" };
-        setLocalMessages([initialMessage]);
-        setHistory([]);
-        sessionStorage.removeItem('chat_messages');
-        sessionStorage.removeItem('chat_history');
+        if (isMultiplayer) return;
+        clearChat();
     };
 
     const handleOpenRoomModal = () => {
@@ -203,7 +182,6 @@ const Chat: React.FC = () => {
         try {
             const res = await roomService.addDocumentToRoom(roomId, docId);
             if (res.data.status === 'success' || res.data.status === 'already_added') {
-                // Optimistically update roomDocuments to prevent state flickers
                 setRoomDocuments(prev => {
                     if (prev.some(d => d.document_id === docId)) return prev;
                     return [...prev, { document_id: docId, filename: res.data.filename }];
@@ -219,48 +197,15 @@ const Chat: React.FC = () => {
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim() || loading) return;
+        if (!input.trim() || queryLoading) return;
 
         const question = input.trim();
         setInput('');
 
-        // --- MULTIPLAYER MODE ROUTING ---
         if (isMultiplayer) {
             sendWsMessage(question, provider);
-            return;
-        }
-
-        // --- SINGLE PLAYER LOCAL MODE ROUTING ---
-        setLocalMessages(prev => [...prev, { role: 'user', content: question }]);
-        setLoading(true);
-
-        try {
-            const res = await queryService.ask({
-                question,
-                chat_history: history,
-                provider,
-                folder_id: selectedFolderId
-            });
-
-            const data = res.data;
-            setLocalMessages(prev => [...prev, {
-                role: 'ai',
-                content: data.answer,
-                sources: data.sources
-            }]);
-
-            setHistory(prev => [
-                ...prev,
-                { role: 'user', content: question },
-                { role: 'assistant', content: data.answer }
-            ]);
-        } catch {
-            setLocalMessages(prev => [...prev, {
-                role: 'ai',
-                content: "⚠️ Error contacting the intelligence engine. Please check your connection or API keys."
-            }]);
-        } finally {
-            setLoading(false);
+        } else {
+            sendQuery(question);
         }
     };
 
@@ -482,17 +427,36 @@ const Chat: React.FC = () => {
 
                                         <div className={`group relative p-5 rounded-2xl border ${isRightSide ? 'bg-accentSec/10 border-accentSec/30 rounded-tr-sm backdrop-blur-md' : 'bg-black/40 border-white/10 rounded-tl-sm backdrop-blur-md hover:border-white/20 transition-colors'}`}>
                                             <div className="markdown-content text-[0.95rem] text-textMain/90 leading-relaxed">
-                                                <ReactMarkdown>{msg.content}</ReactMarkdown>
+                                                <ReactMarkdown
+                                                    components={{
+                                                        p: ({ children }) => <span className="block mb-4 last:mb-0">{children}</span>,
+                                                        code: ({ inline, className, children, ...props }: any) => {
+                                                            const isAiMention = inline && children?.toString().toLowerCase() === '@ai';
+                                                            if (isAiMention) {
+                                                                return <span className="text-accentGlow font-bold drop-shadow-glow bg-accentGlow/10 px-1.5 py-0.5 rounded-md border border-accentGlow/20 mx-1">@ai</span>;
+                                                            }
+                                                            return <code className={className} {...props}>{children}</code>;
+                                                        },
+                                                        strong: ({ children }) => {
+                                                            if (children?.toString().toLowerCase() === '@ai') {
+                                                                return <span className="text-accentGlow font-bold drop-shadow-glow bg-accentGlow/10 px-1.5 py-0.5 rounded-md border border-accentGlow/20 mx-1">@ai</span>;
+                                                            }
+                                                            return <strong className="font-bold">{children}</strong>;
+                                                        }
+                                                    }}
+                                                >
+                                                    {msg.content.replace(/@ai/gi, '**@ai**')}
+                                                </ReactMarkdown>
                                             </div>
 
-                                            {msg.sources && msg.sources.length > 0 && (
+                                            {(msg as any).sources && (msg as any).sources.length > 0 && (
                                                 <details className="mt-5 border-t border-white/10 pt-4 cursor-pointer group/details">
                                                     <summary className="list-none text-xs text-accentGlow font-bold flex items-center gap-2 uppercase tracking-wider select-none hover:text-accentGlow/80 transition-colors">
                                                         <ChevronRight size={14} className="transition-transform group-open/details:rotate-90" />
-                                                        Sources Cited ({msg.sources.length})
+                                                        Sources Cited ({(msg as any).sources.length})
                                                     </summary>
                                                     <div className="flex flex-col gap-3 mt-4">
-                                                        {msg.sources.map((src: any, j: number) => (
+                                                        {(msg as any).sources.map((src: any, j: number) => (
                                                             <div key={j} className="bg-black/50 p-3.5 border-l-2 border-accentGlow rounded-r-lg text-sm border-t border-b border-r border-white/5 hover:bg-black/70 transition-colors">
                                                                 <div className="flex justify-between items-center mb-2">
                                                                     <strong className="flex items-center gap-2 text-textMain/80 shrink-0 min-w-0 pr-2">
@@ -518,7 +482,7 @@ const Chat: React.FC = () => {
                         })}
                     </AnimatePresence>
 
-                    {loading && (
+                    {queryLoading && (
                         <div className="flex gap-4 max-w-[85%] self-start mt-2">
                             <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center bg-accentGlow/10 border border-accentGlow/30 shadow-glow">
                                 <Loader2 size={20} className="text-accentGlow animate-spin" />
@@ -551,7 +515,7 @@ const Chat: React.FC = () => {
                             />
                             <button
                                 type="submit"
-                                disabled={loading || !input.trim() || (isMultiplayer && !isConnected)}
+                                disabled={queryLoading || !input.trim() || (isMultiplayer && !isConnected)}
                                 className="w-12 h-12 shrink-0 rounded-lg bg-accent-gradient flex items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-glow disabled:opacity-50 disabled:hover:shadow-none disabled:cursor-not-allowed shrink-0"
                             >
                                 <Send size={20} className="text-white ml-0.5" />

@@ -10,6 +10,7 @@ import Connectors from './pages/Connectors';
 import AdminStats from './pages/AdminStats';
 import UserManagement from './pages/UserManagement';
 import { WebSocketProvider } from './context/WebSocketContext';
+import { ChatProvider } from './context/ChatContext';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -26,8 +27,9 @@ const App: React.FC = () => {
   return (
     <AuthProvider>
       <WebSocketProvider>
-        <BrowserRouter>
-          <Routes>
+        <ChatProvider>
+          <BrowserRouter>
+            <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
 
@@ -77,7 +79,8 @@ const App: React.FC = () => {
             <Route path="/" element={<Navigate to="/chat" replace />} />
             <Route path="*" element={<Navigate to="/chat" replace />} />
           </Routes>
-        </BrowserRouter>
+          </BrowserRouter>
+        </ChatProvider>
       </WebSocketProvider>
     </AuthProvider>
   );
