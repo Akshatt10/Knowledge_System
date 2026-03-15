@@ -111,8 +111,11 @@ const Connectors: React.FC = () => {
     };
 
     const handleBrowseFiles = async (provider: ActivePicker) => {
+        setActivePicker(provider);
         setLoadingFiles(true);
+        setRemoteFiles([]);
         setError(null);
+        setSyncResult(null);
         try {
             let res;
             switch (provider) {
@@ -124,9 +127,9 @@ const Connectors: React.FC = () => {
             }
             setRemoteFiles(res.data.files);
             setSelectedFiles(new Set());
-            setActivePicker(provider);
         } catch (err: any) {
             setError(err.response?.data?.detail || 'Failed to load files.');
+            setActivePicker(null);
         } finally {
             setLoadingFiles(false);
         }
@@ -283,17 +286,118 @@ const Connectors: React.FC = () => {
                         </div>
                     </div>
                 )}
+
+                {/* Inlined File Picker */}
+                <AnimatePresence mode="wait">
+                    {activePicker === provider && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="overflow-hidden border-t border-white/5 mt-4"
+                        >
+                            <div className="pt-6 space-y-4">
+                                {remoteFiles.length > 0 ? (
+                                    <>
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-textMain text-sm font-semibold flex items-center gap-2">
+                                                <FileText size={16} className="text-accentGlow" />
+                                                Available Files ({remoteFiles.length})
+                                            </h3>
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={toggleAll}
+                                                    className="text-[0.65rem] text-textSec hover:text-textMain transition-colors uppercase tracking-wider font-bold"
+                                                >
+                                                    {selectedFiles.size === remoteFiles.length ? 'Deselect All' : 'Select All'}
+                                                </button>
+                                                <button
+                                                    onClick={handleSyncSelected}
+                                                    disabled={selectedFiles.size === 0 || syncing}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-gradient text-white text-xs font-bold shadow-glow hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                                >
+                                                    {syncing ? (
+                                                        <Loader2 size={12} className="animate-spin" />
+                                                    ) : (
+                                                        <FolderSync size={12} />
+                                                    )}
+                                                    {syncing ? 'Importing...' : `Import ${selectedFiles.size}`}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+                                            {remoteFiles.map(file => (
+                                                <button
+                                                    key={file.id}
+                                                    onClick={() => toggleFile(file.id)}
+                                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-all ${selectedFiles.has(file.id)
+                                                        ? 'bg-accentGlow/10 border border-accentGlow/20'
+                                                        : 'hover:bg-white/5 border border-transparent'
+                                                        }`}
+                                                >
+                                                    <div className={`w-4 h-4 rounded-sm flex items-center justify-center border transition-all ${selectedFiles.has(file.id)
+                                                        ? 'bg-accentGlow border-accentGlow'
+                                                        : 'border-white/20'
+                                                        }`}>
+                                                        {selectedFiles.has(file.id) && <Check size={10} className="text-darkBg" />}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="text-xs text-textMain truncate font-medium">{file.name}</div>
+                                                        <div className="text-[0.6rem] text-textSec flex items-center gap-1.5">
+                                                            <span className="opacity-60">{FILE_TYPE_LABELS[file.mimeType] || 'File'}</span>
+                                                            {file.size && <span className="w-1 h-1 rounded-full bg-white/10" />}
+                                                            {file.size && <span>{file.size}</span>}
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : !loadingFiles ? (
+                                    <div className="text-center py-4 text-xs text-textSec italic">
+                                        No compatible documents found.
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-center py-8">
+                                        <Loader2 size={24} className="animate-spin text-accentGlow opacity-50" />
+                                    </div>
+                                )}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* Inlined Sync Results */}
+                <AnimatePresence>
+                    {syncResult && activePicker === provider && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="mt-4 p-4 rounded-xl bg-white/5 border border-white/5"
+                        >
+                            <h4 className="text-xs font-bold text-textMain mb-2 flex items-center gap-1.5">
+                                <CheckCircle2 size={14} className="text-success" />
+                                Success: {syncResult.synced_count} Documents
+                            </h4>
+
+                            {syncResult.errors.length > 0 && (
+                                <div className="mt-2 pt-2 border-t border-white/5">
+                                    {syncResult.errors.map((err, i) => (
+                                        <div key={i} className="flex items-center gap-2 text-[0.65rem] text-danger">
+                                            <AlertCircle size={10} />
+                                            {err}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </motion.div>
+                    )}
+                </AnimatePresence>
             </div>
         );
     };
-
-    const pickerLabels: Record<string, string> = {
-        'google_drive': 'Drive',
-        'notion': 'Notion',
-        'slack': 'Slack Channels',
-        'github': 'GitHub Docs',
-    };
-    const pickerLabel = activePicker ? pickerLabels[activePicker] || 'Files' : 'Files';
 
     return (
         <div className="flex-1 p-8 overflow-y-auto">
@@ -368,124 +472,6 @@ const Connectors: React.FC = () => {
                             <Github size={24} className="text-purple-400" />,
                             'bg-purple-500/10',
                         )}
-
-                        {/* File Picker */}
-                        <AnimatePresence>
-                            {activePicker && remoteFiles.length > 0 && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0 }}
-                                    className="glass-panel p-6 rounded-2xl"
-                                >
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-textMain font-semibold flex items-center gap-2">
-                                            <FileText size={18} className="text-accentGlow" />
-                                            Your {pickerLabel} ({remoteFiles.length})
-                                        </h3>
-                                        <div className="flex items-center gap-3">
-                                            <button
-                                                onClick={toggleAll}
-                                                className="text-xs text-textSec hover:text-textMain transition-colors"
-                                            >
-                                                {selectedFiles.size === remoteFiles.length ? 'Deselect All' : 'Select All'}
-                                            </button>
-                                            <button
-                                                onClick={handleSyncSelected}
-                                                disabled={selectedFiles.size === 0 || syncing}
-                                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-accent-gradient text-white text-sm font-semibold shadow-glow hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                            >
-                                                {syncing ? (
-                                                    <Loader2 size={14} className="animate-spin" />
-                                                ) : (
-                                                    <FolderSync size={14} />
-                                                )}
-                                                {syncing ? 'Importing...' : `Import ${selectedFiles.size} file${selectedFiles.size !== 1 ? 's' : ''}`}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div className="space-y-1 max-h-[400px] overflow-y-auto pr-1">
-                                        {remoteFiles.map(file => (
-                                            <button
-                                                key={file.id}
-                                                onClick={() => toggleFile(file.id)}
-                                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all ${selectedFiles.has(file.id)
-                                                        ? 'bg-accentGlow/10 border border-accentGlow/20'
-                                                        : 'hover:bg-white/5 border border-transparent'
-                                                    }`}
-                                            >
-                                                <div className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${selectedFiles.has(file.id)
-                                                        ? 'bg-accentGlow border-accentGlow'
-                                                        : 'border-white/20'
-                                                    }`}>
-                                                    {selectedFiles.has(file.id) && <Check size={12} className="text-darkBg" />}
-                                                </div>
-                                                <FileText size={16} className="text-textSec flex-shrink-0" />
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="text-sm text-textMain truncate">{file.name}</div>
-                                                    <div className="text-[0.65rem] text-textSec">
-                                                        {FILE_TYPE_LABELS[file.mimeType] || 'File'}
-                                                        {file.modifiedTime && ` · ${new Date(file.modifiedTime).toLocaleDateString()}`}
-                                                        {file.size && ` · ${file.size}`}
-                                                    </div>
-                                                </div>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </motion.div>
-                            )}
-
-                            {activePicker && remoteFiles.length === 0 && !loadingFiles && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="glass-panel p-6 rounded-2xl text-center text-textSec"
-                                >
-                                    No compatible files found.
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {/* Sync Results */}
-                        <AnimatePresence>
-                            {syncResult && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0 }}
-                                    className="glass-panel p-6 rounded-2xl"
-                                >
-                                    <h3 className="text-textMain font-semibold mb-3 flex items-center gap-2">
-                                        <FolderSync size={18} className="text-accentGlow" />
-                                        Import Results
-                                    </h3>
-                                    <p className="text-sm text-textSec mb-3">
-                                        {syncResult.synced_count} document{syncResult.synced_count !== 1 ? 's' : ''} imported.
-                                    </p>
-                                    {syncResult.new_documents.length > 0 && (
-                                        <ul className="space-y-1 mb-3">
-                                            {syncResult.new_documents.map((doc, i) => (
-                                                <li key={i} className="flex items-center gap-2 text-sm text-success">
-                                                    <CheckCircle2 size={14} />
-                                                    {doc}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                    {syncResult.errors.length > 0 && (
-                                        <ul className="space-y-1">
-                                            {syncResult.errors.map((err, i) => (
-                                                <li key={i} className="flex items-center gap-2 text-sm text-danger">
-                                                    <AlertCircle size={14} />
-                                                    {err}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
                     </div>
                 )}
             </div>

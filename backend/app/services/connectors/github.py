@@ -35,8 +35,6 @@ MAX_FILES_PER_REPO = 1000
 
 
 class GitHubConnector(BaseConnector):
-    pass
-
     def get_auth_url(self, user_id: str) -> str:
         state = str(uuid.uuid4())
         session_store.set_verifier(state, user_id)

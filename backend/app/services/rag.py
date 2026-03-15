@@ -1,18 +1,22 @@
 """
 RAG query engine using LangChain framework supporting Gemini.
+Includes streaming SSE support, hybrid search, and cross-encoder re-ranking.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import time
-from typing import List, Dict
+import uuid
+from typing import AsyncGenerator, List, Dict
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
 from app.config import settings
 from app.services.vectorstore import vector_store
+from app.services.reranker import reranker_service
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +35,7 @@ Rules:
 5. If multiple sources provide information, mention all relevant ones.
 6. Keep answers concise but clear.
 7. Use markdown formatting (bullet points, headings) for readability.
+8. CRITICAL: ALWAYS wrap important terms, names, specific codes, and key entities in **bold** markdown (like **this**). This is required for the UI syntax highlighting to work correctly.
 """
 
 
@@ -90,19 +95,23 @@ class RAGService:
             raise ValueError("No LLM provider configured. Add API keys to .env")
         return self.openai_llm
 
-    def answer_query(
+    # ── Shared retrieval logic ──────────────────────────────────────────
+
+    def _retrieve_and_build_context(
         self,
         question: str,
         user_id: str,
-        chat_history: list[dict[str, str]] | None = None,
         provider: str = "openai",
         folder_id: str | None = None,
-        db: Session | None = None,
-    ) -> dict:
-        """Execute RAG pipeline and return grounded answer."""
+        db=None,
+    ) -> tuple:
+        """Retrieve documents via hybrid search + re-rank, build prompt context.
 
+        Returns:
+            (llm, messages, docs, sources_meta, context_parts)
+        """
         llm = self.get_llm(provider=provider)
-        
+
         filter_dict = {}
         if folder_id and db:
             from app.models.database import Document
@@ -110,44 +119,48 @@ class RAGService:
                 Document.folder_id == folder_id,
                 Document.user_id == user_id
             ).all()]
-            
+
             if not doc_ids:
-                # If folder is empty, we should return early or return empty docs
-                return {
-                    "answer": "This folder is empty. Please add some documents to it first.",
-                    "sources": [],
-                }
-            
+                return llm, None, [], [], []
+
             filter_dict["document_id"] = {"$in": doc_ids}
 
-        # Better retriever with MMR for diverse but relevant chunks
-        retriever = vector_store.get_retriever(
-            user_id=user_id,
-            search_type="mmr",
-            search_kwargs={
-                "k": 5,
-                "fetch_k": 15,
-            },
-            filter_dict=filter_dict
-        )
-
-        # 1️⃣ Retrieve documents
-        docs = retriever.invoke(question)
+        # ── Hybrid Search (BM25 + Dense) ───────────────────────────────
+        try:
+            docs = vector_store.hybrid_search(
+                query=question,
+                user_id=user_id,
+                top_k=15,
+                filter_dict=filter_dict,
+            )
+        except Exception as e:
+            logger.warning("Hybrid search failed, falling back to MMR retriever: %s", e)
+            retriever = vector_store.get_retriever(
+                user_id=user_id,
+                search_type="mmr",
+                search_kwargs={"k": 5, "fetch_k": 15},
+                filter_dict=filter_dict,
+            )
+            docs = retriever.invoke(question)
 
         if not docs:
-            logger.warning("No documents retrieved for query: %s", question)
-            return {
-                "answer": "I couldn't find this information in your documents.",
-                "sources": [],
-            }
+            return llm, None, [], [], []
 
-        # 2️⃣ Build structured context
+        # ── Cross-Encoder Re-ranking ───────────────────────────────────
+        try:
+            docs = reranker_service.rerank(query=question, documents=docs, top_k=5)
+        except Exception as e:
+            logger.warning("Re-ranking failed, using raw retrieval order: %s", e)
+            docs = docs[:5]
+
+        # ── Build structured context ───────────────────────────────────
         context_parts = []
         sources_meta = []
 
         for i, doc in enumerate(docs):
             filename = doc.metadata.get("filename", "Unknown Source")
             content = doc.page_content.strip()
+            relevance_score = doc.metadata.get("relevance_score", doc.metadata.get("score", 0.0))
 
             context_parts.append(
                 f"[SOURCE {i+1}: {filename}]\n{content}"
@@ -156,11 +169,11 @@ class RAGService:
             sources_meta.append({
                 "filename": filename,
                 "chunk_excerpt": content[:200] + "...",
+                "relevance_score": relevance_score,
             })
 
         formatted_context = "\n\n".join(context_parts)
 
-        # 3️⃣ Build prompt
         user_prompt = f"""
 CONTEXT:
 {formatted_context}
@@ -177,11 +190,41 @@ Answer the question using ONLY the context above.
         ]
 
         logger.info(
-            "Executing RAG for user %s with %d context chunks using %s",
-            user_id,
-            len(docs),
-            provider
+            "RAG retrieval for user %s: %d chunks (hybrid+rerank) using %s",
+            user_id, len(docs), provider
         )
+
+        return llm, messages, docs, sources_meta, context_parts
+
+    # ── Synchronous (legacy) query ──────────────────────────────────────
+
+    def answer_query(
+        self,
+        question: str,
+        user_id: str,
+        chat_history: list[dict[str, str]] | None = None,
+        provider: str = "openai",
+        folder_id: str | None = None,
+        db=None,
+    ) -> dict:
+        """Execute RAG pipeline and return grounded answer."""
+        start_time = time.time()
+
+        llm, messages, docs, sources_meta, _ = self._retrieve_and_build_context(
+            question, user_id, provider, folder_id, db
+        )
+
+        if messages is None:
+            return {
+                "answer": "I couldn't find this information in your documents." if not docs else "This folder is empty. Please add some documents to it first.",
+                "sources": [],
+                "analytics": {
+                    "latency_ms": int((time.time() - start_time) * 1000),
+                    "chunks_retrieved": 0,
+                    "had_answer": False,
+                    "provider": provider,
+                },
+            }
 
         try:
             response = llm.invoke(messages)
@@ -203,11 +246,95 @@ Answer the question using ONLY the context above.
                 raise
 
         answer_text = response.content.strip()
+        latency_ms = int((time.time() - start_time) * 1000)
+        had_answer = "couldn't find this information" not in answer_text.lower()
 
         return {
             "answer": answer_text,
             "sources": sources_meta,
+            "analytics": {
+                "latency_ms": latency_ms,
+                "chunks_retrieved": len(docs),
+                "had_answer": had_answer,
+                "provider": provider,
+            },
         }
+
+    # ── Streaming query (SSE) ──────────────────────────────────────────
+
+    async def stream_answer_query(
+        self,
+        question: str,
+        user_id: str,
+        chat_history: list[dict[str, str]] | None = None,
+        provider: str = "openai",
+        folder_id: str | None = None,
+        db=None,
+    ) -> AsyncGenerator[str, None]:
+        """Execute RAG pipeline and yield SSE events token-by-token.
+
+        Yields:
+            SSE-formatted strings: data: {"type":"token","content":"..."}\n\n
+        """
+        start_time = time.time()
+
+        llm, messages, docs, sources_meta, _ = self._retrieve_and_build_context(
+            question, user_id, provider, folder_id, db
+        )
+
+        if messages is None:
+            no_answer = "I couldn't find this information in your documents." if not docs else "This folder is empty. Please add some documents to it first."
+            yield f'data: {json.dumps({"type": "token", "content": no_answer})}\n\n'
+            yield f'data: {json.dumps({"type": "sources", "sources": []})}\n\n'
+            yield f'data: {json.dumps({"type": "analytics", "latency_ms": int((time.time() - start_time) * 1000), "chunks_retrieved": 0, "had_answer": False, "provider": provider})}\n\n'
+            yield 'data: {"type": "done"}\n\n'
+            return
+
+        full_response = ""
+        actual_provider = provider
+
+        try:
+            async for chunk in llm.astream(messages):
+                if chunk.content:
+                    full_response += chunk.content
+                    yield f'data: {json.dumps({"type": "token", "content": chunk.content})}\n\n'
+
+        except Exception as e:
+            error_str = str(e)
+            logger.warning("Primary LLM (%s) failed during stream: %s", provider, error_str)
+
+            if provider == "gemini" and ("429" in error_str or "RESOURCE_EXHAUSTED" in error_str):
+                self._trip_gemini_breaker()
+
+            # Attempt fallback
+            fallback_llm = None
+            if provider == "gemini" and self.openai_llm:
+                fallback_llm = self.openai_llm
+                actual_provider = "openai"
+            elif provider == "openai" and self.gemini_llm:
+                fallback_llm = self.gemini_llm
+                actual_provider = "gemini"
+
+            if fallback_llm:
+                yield f'data: {json.dumps({"type": "token", "content": "[Switching provider...]"})}\n\n'
+                try:
+                    async for chunk in fallback_llm.astream(messages):
+                        if chunk.content:
+                            full_response += chunk.content
+                            yield f'data: {json.dumps({"type": "token", "content": chunk.content})}\n\n'
+                except Exception as fallback_err:
+                    error_msg = f"[Error: Both providers failed: {str(fallback_err)}]"
+                    yield f'data: {json.dumps({"type": "token", "content": error_msg})}\n\n'
+            else:
+                yield f'data: {json.dumps({"type": "token", "content": f"[Error: {error_str}]"})}\n\n'
+
+        # Send sources and analytics
+        latency_ms = int((time.time() - start_time) * 1000)
+        had_answer = "couldn't find this information" not in full_response.lower()
+
+        yield f'data: {json.dumps({"type": "sources", "sources": sources_meta})}\n\n'
+        yield f'data: {json.dumps({"type": "analytics", "latency_ms": latency_ms, "chunks_retrieved": len(docs), "had_answer": had_answer, "provider": actual_provider})}\n\n'
+        yield 'data: {"type": "done"}\n\n'
 
 
 rag_service = RAGService()

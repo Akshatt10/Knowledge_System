@@ -72,6 +72,77 @@ export const documentService = {
 export const queryService = {
     ask: (data: { question: string; provider: string; chat_history?: any[]; folder_id?: string | null }) =>
         api.post('/query', data),
+
+    streamAsk: async (
+        params: { question: string; provider: string; folder_id?: string | null },
+        callbacks: {
+            onToken: (token: string) => void;
+            onSources: (sources: any[]) => void;
+            onDone: () => void;
+            onError: (error: string) => void;
+        }
+    ) => {
+        const token = localStorage.getItem('token');
+        const queryParams = new URLSearchParams({
+            question: params.question,
+            provider: params.provider,
+        });
+        if (params.folder_id) {
+            queryParams.set('folder_id', params.folder_id);
+        }
+
+        try {
+            const response = await fetch(`${API_BASE}/query/stream?${queryParams}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Accept': 'text/event-stream',
+                },
+            });
+
+            if (!response.ok) {
+                callbacks.onError(`Server error: ${response.status}`);
+                return;
+            }
+
+            const reader = response.body?.getReader();
+            if (!reader) {
+                callbacks.onError('Stream not available');
+                return;
+            }
+
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split('\n');
+                buffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        try {
+                            const event = JSON.parse(line.slice(6));
+                            if (event.type === 'token') {
+                                callbacks.onToken(event.content);
+                            } else if (event.type === 'sources') {
+                                callbacks.onSources(event.sources || []);
+                            } else if (event.type === 'done') {
+                                callbacks.onDone();
+                            }
+                        } catch {
+                            // Skip malformed JSON lines
+                        }
+                    }
+                }
+            }
+        } catch (err: any) {
+            callbacks.onError(err.message || 'Stream connection failed');
+        }
+    },
 };
 
 // Folder Services
