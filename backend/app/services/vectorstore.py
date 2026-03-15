@@ -106,5 +106,77 @@ class VectorStoreService:
             logger.error("Failed to fetch Pinecone stats: %s", str(e))
             return {"total_chunks": 0, "collection_name": "Pinecone (Error)"}
 
+    def _get_index(self):
+        """Return the raw Pinecone Index object for direct queries."""
+        return self.pc.Index(settings.PINECONE_INDEX_NAME)
+
+    def hybrid_search(
+        self,
+        query: str,
+        user_id: str | None = None,
+        top_k: int = 15,
+        filter_dict: dict | None = None,
+    ) -> list:
+        """Hybrid BM25 + dense vector search via Pinecone.
+
+        Falls back to dense-only similarity search if pinecone-text
+        is not installed or sparse encoding fails.
+        """
+        from langchain_core.documents import Document as LCDocument
+
+        # Build metadata filter
+        final_filter = {}
+        if user_id:
+            final_filter["user_id"] = user_id
+        if filter_dict:
+            final_filter.update(filter_dict)
+
+        # 1. Generate dense embedding
+        dense_vector = self.embeddings.embed_query(query)
+
+        # 2. Try to generate sparse BM25 vector
+        sparse_vector = None
+        try:
+            from pinecone_text.sparse import BM25Encoder
+            bm25 = BM25Encoder.default()
+            sparse_result = bm25.encode_queries(query)
+            sparse_vector = {
+                "indices": sparse_result["indices"],
+                "values": sparse_result["values"],
+            }
+        except ImportError:
+            logger.info("pinecone-text not installed; using dense-only search")
+        except Exception as e:
+            logger.warning("BM25 sparse encoding failed, falling back to dense-only: %s", e)
+
+        # 3. Query Pinecone
+        index = self._get_index()
+
+        query_params = {
+            "vector": dense_vector,
+            "top_k": top_k,
+            "include_metadata": True,
+        }
+        if sparse_vector:
+            query_params["sparse_vector"] = sparse_vector
+        if final_filter:
+            query_params["filter"] = final_filter
+
+        results = index.query(**query_params)
+
+        # 4. Convert Pinecone matches → LangChain Document objects
+        documents = []
+        for match in results.get("matches", []):
+            metadata = match.get("metadata", {})
+            text = metadata.pop("text", "")  # Pinecone stores text in metadata
+            metadata["score"] = match.get("score", 0.0)
+            documents.append(LCDocument(page_content=text, metadata=metadata))
+
+        logger.info(
+            "Hybrid search returned %d results for query (user=%s)",
+            len(documents), user_id
+        )
+        return documents
+
 # ── Module-level singleton ─────────────────────────────────────────────
 vector_store = VectorStoreService()

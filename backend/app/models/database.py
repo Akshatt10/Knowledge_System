@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, String, DateTime, Integer, Boolean
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
@@ -89,3 +89,17 @@ class ConnectedAccount(Base):
     token_expiry = Column(DateTime, nullable=True)
     connected_at = Column(DateTime, default=datetime.utcnow)
     last_synced_at = Column(DateTime, nullable=True)
+
+
+class QueryLog(Base):
+    """Tracks every RAG query for analytics, cost tracking, and knowledge gap detection."""
+    __tablename__ = "query_logs"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), index=True, nullable=False)
+    question = Column(String, nullable=False)
+    provider = Column(String(50))          # "openai" or "gemini"
+    latency_ms = Column(Integer)           # end-to-end response time in milliseconds
+    chunks_retrieved = Column(Integer)     # number of context chunks found
+    had_answer = Column(Boolean)           # False if "couldn't find information"
+    created_at = Column(DateTime, default=datetime.utcnow)

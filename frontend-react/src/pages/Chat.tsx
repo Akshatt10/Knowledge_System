@@ -47,6 +47,7 @@ const Chat: React.FC = () => {
     const { 
         localMessages, 
         loading: queryLoading, 
+        streaming,
         provider, 
         setProvider, 
         sendQuery, 
@@ -54,6 +55,8 @@ const Chat: React.FC = () => {
         selectedFolderId,
         setSelectedFolderId
     } = useChat();
+
+    const isBusy = queryLoading || streaming;
 
     const [input, setInput] = useState('');
     const [copied, setCopied] = useState(false);
@@ -197,7 +200,7 @@ const Chat: React.FC = () => {
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim() || queryLoading) return;
+        if (!input.trim() || isBusy) return;
 
         const question = input.trim();
         setInput('');
@@ -515,7 +518,7 @@ const Chat: React.FC = () => {
                             />
                             <button
                                 type="submit"
-                                disabled={queryLoading || !input.trim() || (isMultiplayer && !isConnected)}
+                                disabled={isBusy || !input.trim() || (isMultiplayer && !isConnected)}
                                 className="w-12 h-12 shrink-0 rounded-lg bg-accent-gradient flex items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-glow disabled:opacity-50 disabled:hover:shadow-none disabled:cursor-not-allowed shrink-0"
                             >
                                 <Send size={20} className="text-white ml-0.5" />

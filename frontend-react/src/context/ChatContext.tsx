@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { queryService } from '../services/api';
 
 interface Message {
@@ -12,6 +12,7 @@ interface Message {
 interface ChatContextType {
     localMessages: Message[];
     loading: boolean;
+    streaming: boolean;
     provider: string;
     history: any[];
     selectedFolderId: string | null;
@@ -38,7 +39,9 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return sessionStorage.getItem('chat_provider') || 'gemini';
     });
     const [loading, setLoading] = useState(false);
+    const [streaming, setStreaming] = useState(false);
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+    const receivedFirstToken = useRef(false);
 
     const setProvider = (p: string) => {
         setProviderState(p);
@@ -62,37 +65,89 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     const sendQuery = useCallback(async (question: string) => {
+        // Show user message + loading spinner
         setLocalMessages(prev => [...prev, { role: 'user', content: question }]);
         setLoading(true);
+        setStreaming(false);
+        receivedFirstToken.current = false;
 
         try {
-            const res = await queryService.ask({
-                question,
-                chat_history: history,
-                provider,
-                folder_id: selectedFolderId
-            });
-
-            const data = res.data;
-            setLocalMessages(prev => [...prev, {
-                role: 'ai',
-                content: data.answer,
-                sources: data.sources
-            }]);
-
-            setHistory(prev => [
-                ...prev,
-                { role: 'user', content: question },
-                { role: 'assistant', content: data.answer }
-            ]);
+            await queryService.streamAsk(
+                {
+                    question,
+                    provider,
+                    folder_id: selectedFolderId,
+                },
+                {
+                    onToken: (token: string) => {
+                        // On FIRST token: hide spinner, add AI bubble, switch to streaming mode
+                        if (!receivedFirstToken.current) {
+                            receivedFirstToken.current = true;
+                            setLoading(false);
+                            setStreaming(true);
+                            setLocalMessages(prev => [...prev, { role: 'ai' as const, content: token, sources: [] }]);
+                        } else {
+                            // Append subsequent tokens to the existing AI message
+                            setLocalMessages(prev => {
+                                const updated = [...prev];
+                                const lastAi = updated[updated.length - 1];
+                                if (lastAi && lastAi.role === 'ai') {
+                                    updated[updated.length - 1] = {
+                                        ...lastAi,
+                                        content: lastAi.content + token,
+                                    };
+                                }
+                                return updated;
+                            });
+                        }
+                    },
+                    onSources: (sources: any[]) => {
+                        setLocalMessages(prev => {
+                            const updated = [...prev];
+                            const lastAi = updated[updated.length - 1];
+                            if (lastAi && lastAi.role === 'ai') {
+                                updated[updated.length - 1] = {
+                                    ...lastAi,
+                                    sources,
+                                };
+                            }
+                            return updated;
+                        });
+                    },
+                    onDone: () => {
+                        setLocalMessages(prev => {
+                            const lastAi = prev[prev.length - 1];
+                            if (lastAi && lastAi.role === 'ai') {
+                                setHistory(h => [
+                                    ...h,
+                                    { role: 'user', content: question },
+                                    { role: 'assistant', content: lastAi.content },
+                                ]);
+                            }
+                            return prev;
+                        });
+                        setLoading(false);
+                        setStreaming(false);
+                    },
+                    onError: (error: string) => {
+                        console.error('Stream error:', error);
+                        setLocalMessages(prev => [...prev, {
+                            role: 'ai' as const,
+                            content: '⚠️ Error contacting the intelligence engine. Please check your connection or API keys.',
+                        }]);
+                        setLoading(false);
+                        setStreaming(false);
+                    },
+                }
+            );
         } catch (err) {
-            console.error("Chat Query Error:", err);
+            console.error('Chat Query Error:', err);
             setLocalMessages(prev => [...prev, {
-                role: 'ai',
-                content: "⚠️ Error contacting the intelligence engine. Please check your connection or API keys."
+                role: 'ai' as const,
+                content: '⚠️ Error contacting the intelligence engine. Please check your connection or API keys.',
             }]);
-        } finally {
             setLoading(false);
+            setStreaming(false);
         }
     }, [history, provider, selectedFolderId]);
 
@@ -100,6 +155,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         <ChatContext.Provider value={{ 
             localMessages, 
             loading, 
+            streaming,
             provider, 
             history, 
             selectedFolderId,
