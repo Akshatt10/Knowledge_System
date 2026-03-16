@@ -86,22 +86,22 @@ const UserManagement: React.FC = () => {
     );
 
     return (
-        <div className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative">
+        <div className="flex-1 p-4 md:p-10 overflow-y-auto custom-scrollbar relative">
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-500/5 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
 
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                     <div>
-                        <h1 className="text-3xl font-outfit font-bold text-white flex items-center gap-3">
-                            <Users className="text-purple-400" /> User Management
+                        <h1 className="text-2xl md:text-3xl font-outfit font-bold text-white flex items-center gap-3">
+                            <Users className="text-purple-400" /> Registry
                         </h1>
-                        <p className="text-textSec mt-1 text-sm md:text-base">Manage platform access control and administrative roles.</p>
+                        <p className="text-textSec mt-1 text-xs md:text-sm">Manage platform access control and roles.</p>
                     </div>
                     <button
                         onClick={loadUsers}
                         disabled={loading}
-                        className="glass-panel flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
+                        className="glass-panel flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg w-full sm:w-auto justify-center"
                     >
                         {loading ? <Loader2 size={18} className="animate-spin text-purple-400" /> : <RefreshCw size={18} className="text-purple-400" />}
                         {loading ? 'Syncing...' : 'Sync Users'}
@@ -125,7 +125,7 @@ const UserManagement: React.FC = () => {
                     <div className="absolute left-0 top-0 w-64 h-64 bg-purple-500/5 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
 
                     {/* Table Header */}
-                    <div className="px-6 py-4 bg-white/5 border-b border-white/10 grid grid-cols-[1fr_120px_100px_100px] md:grid-cols-[2fr_1fr_1fr_120px] gap-4 font-bold text-xs text-textSec uppercase tracking-wider">
+                    <div className="px-6 py-4 bg-white/5 border-b border-white/10 grid grid-cols-[1fr_auto] md:grid-cols-[2fr_1fr_1fr_120px] gap-4 font-bold text-[10px] md:text-xs text-textSec uppercase tracking-wider">
                         <div>User Account</div>
                         <div className="hidden md:block">Assigned Role</div>
                         <div className="hidden md:block">Status</div>
@@ -157,25 +157,30 @@ const UserManagement: React.FC = () => {
                                             animate={{ opacity: 1, x: 0 }}
                                             exit={{ opacity: 0, x: 10 }}
                                             transition={{ delay: idx * 0.05 }}
-                                            className={`px-6 py-5 grid grid-cols-[1fr_120px_100px_100px] md:grid-cols-[2fr_1fr_1fr_120px] gap-4 items-center border-b border-white/5 transition-colors hover:bg-white/5 ${isMe ? 'bg-purple-500/5 hover:bg-purple-500/10' : ''} ${idx === filteredUsers.length - 1 ? 'border-none' : ''}`}
+                                            className={`px-4 md:px-6 py-4 md:py-5 grid grid-cols-[1fr_auto] md:grid-cols-[2fr_1fr_1fr_120px] gap-4 items-center border-b border-white/5 transition-colors hover:bg-white/5 ${isMe ? 'bg-purple-500/5 hover:bg-purple-500/10' : ''} ${idx === filteredUsers.length - 1 ? 'border-none' : ''}`}
                                         >
-                                            <div className="flex items-center gap-4 min-w-0">
-                                                <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center border shadow-sm ${isMe ? 'bg-purple-500/20 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/10 text-textSec'}`}>
-                                                    <User size={18} className={isMe ? 'drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]' : ''} />
+                                            <div className="flex items-center gap-3 md:gap-4 min-w-0">
+                                                <div className={`w-9 h-9 md:w-10 md:h-10 rounded-xl shrink-0 flex items-center justify-center border shadow-sm ${isMe ? 'bg-purple-500/20 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/10 text-textSec'}`}>
+                                                    <User size={16} className={isMe ? 'drop-shadow-[0_0_8px_rgba(168,85,247,0.8)]' : ''} />
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <div className="font-bold text-white/90 text-[0.95rem] truncate flex items-center gap-2">
+                                                    <div className="font-bold text-white/90 text-[0.85rem] md:text-[0.95rem] truncate flex items-center gap-2">
                                                         {u.email}
-                                                        {isMe && <span className="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-md border border-purple-500/30 uppercase tracking-wider font-bold shrink-0">You</span>}
+                                                        {isMe && <span className="text-[8px] md:text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded-md border border-purple-500/30 uppercase tracking-wider font-bold shrink-0">Me</span>}
                                                     </div>
-                                                    <div className="text-xs font-mono text-textSec/60 mt-0.5 truncate">
+                                                    <div className="md:hidden flex items-center gap-2 mt-1">
+                                                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold border ${isAdmin ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-white/5 text-textSec border-white/10'}`}>
+                                                            {u.role}
+                                                        </span>
+                                                        <div className="w-1 h-1 rounded-full bg-success"></div>
+                                                    </div>
+                                                    <div className="hidden md:block text-xs font-mono text-textSec/60 mt-0.5 truncate">
                                                         UID: {u.id.substring(0, 12)}...
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            {/* Mobile: Role & Status combined, Desktop: split */}
-                                            <div className="col-span-2 md:col-span-1 hidden md:flex items-center">
+                                            <div className="hidden md:flex items-center">
                                                 <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border flex items-center gap-1.5 w-fit ${isAdmin
                                                     ? 'bg-purple-500/10 text-purple-400 border-purple-500/20 shadow-[inset_0_0_10px_rgba(168,85,247,0.1)]'
                                                     : 'bg-white/5 text-textSec border-white/10'
@@ -192,39 +197,24 @@ const UserManagement: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Mobile merged info */}
-                                            <div className="md:hidden flex flex-col items-start justify-center gap-1">
-                                                <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${isAdmin ? 'bg-purple-500/10 text-purple-400 border-purple-500/20' : 'bg-white/5 text-textSec border-white/10'}`}>
-                                                    {u.role.substring(0, 3).toUpperCase()}
-                                                </span>
-                                            </div>
-
-                                            <div className="flex justify-end gap-2 text-right">
+                                            <div className="flex justify-end gap-1 md:gap-2 text-right">
                                                 {actionLoading === u.id ? (
-                                                    <Loader2 size={20} className="animate-spin text-textSec opacity-50" />
+                                                    <Loader2 size={18} className="animate-spin text-textSec opacity-50" />
                                                 ) : (
                                                     <>
                                                         <button
                                                             onClick={() => handleRoleToggle(u.id, u.role)}
-                                                            title={isAdmin ? 'Demote to User' : 'Promote to Admin'}
                                                             disabled={isMe}
-                                                            className={`p-2 rounded-lg transition-all duration-300 ${isMe
-                                                                ? 'opacity-30 cursor-not-allowed text-textSec'
-                                                                : 'text-textSec hover:text-white bg-transparent hover:bg-white/10 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]'
-                                                                }`}
+                                                            className={`p-1.5 md:p-2 rounded-lg transition-all ${isMe ? 'opacity-20 cursor-not-allowed' : 'text-textSec hover:text-white hover:bg-white/10'}`}
                                                         >
-                                                            <Shield size={18} />
+                                                            <Shield size={16} />
                                                         </button>
                                                         <button
                                                             onClick={() => handleDeleteUser(u.id, u.email)}
-                                                            title="Delete User"
                                                             disabled={isMe}
-                                                            className={`p-2 rounded-lg transition-all duration-300 ${isMe
-                                                                ? 'opacity-30 cursor-not-allowed text-textSec'
-                                                                : 'text-textSec hover:text-danger bg-transparent hover:bg-danger/10 hover:shadow-[0_0_15px_rgba(244,63,94,0.15)]'
-                                                                }`}
+                                                            className={`p-1.5 md:p-2 rounded-lg transition-all ${isMe ? 'opacity-20 cursor-not-allowed' : 'text-textSec hover:text-danger hover:bg-danger/10'}`}
                                                         >
-                                                            <Trash2 size={18} />
+                                                            <Trash2 size={16} />
                                                         </button>
                                                     </>
                                                 )}

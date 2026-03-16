@@ -236,16 +236,16 @@ const Chat: React.FC = () => {
         <div className="flex-1 flex flex-row h-screen p-4 lg:p-6 overflow-hidden max-w-full">
             <div className="glass-panel flex-1 flex flex-col h-full overflow-hidden shadow-2xl relative z-10 w-full">
                 {/* Chat Header */}
-                <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-black/20 backdrop-blur-md z-20 shrink-0">
+                <div className="px-4 md:px-6 py-4 border-b border-white/10 flex justify-between items-center bg-black/20 backdrop-blur-md z-20 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-success shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse"></div>
-                        <h3 className="text-lg font-outfit font-semibold flex items-center gap-2 text-textMain">
+                        <h3 className="text-sm md:text-lg font-outfit font-semibold flex items-center gap-2 text-textMain truncate">
                             Nexus Intelligence
                             {isMultiplayer && activeRoomName && (
-                                <>
+                                <span className="hidden sm:inline-flex items-center gap-2">
                                     <ChevronRight size={16} className="text-textSec" />
-                                    <span className="text-accentGlow font-bold decoration-accentGlow/30 underline decoration-2 underline-offset-4">{activeRoomName}</span>
-                                </>
+                                    <span className="text-accentGlow font-bold decoration-accentGlow/30 underline decoration-2 underline-offset-4 truncate max-w-[100px]">{activeRoomName}</span>
+                                </span>
                             )}
                         </h3>
                     </div>
@@ -263,7 +263,7 @@ const Chat: React.FC = () => {
                                     }`}
                                 >
                                     <FolderIcon size={14} />
-                                    {selectedFolderId ? folders.find(f => f.id === selectedFolderId)?.name : 'All Knowledge'}
+                                    <span className="hidden sm:inline">{selectedFolderId ? folders.find(f => f.id === selectedFolderId)?.name : 'All Knowledge'}</span>
                                     <ChevronDown size={14} className={`transition-transform ${showFolderSelector ? 'rotate-180' : ''}`} />
                                 </button>
                                 
@@ -307,36 +307,31 @@ const Chat: React.FC = () => {
                             </div>
                         )}
 
-                        <div className="flex items-center gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 shadow-inner">
+                        <div className="flex items-center gap-1 sm:gap-2 bg-black/40 p-1 rounded-xl border border-white/5 shadow-inner">
                             <button
                                 onClick={() => setProvider('openai')}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${provider === 'openai' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-textMain hover:bg-white/5'}`}
+                                className={`px-2 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all duration-300 ${provider === 'openai' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-textMain hover:bg-white/5'}`}
+                                title="OpenAI"
                             >
-                                OPENAI
+                                <span className="sm:inline">OPENAI</span>
+                                <span className="sm:hidden text-lg leading-none">AI</span>
                             </button>
                             <button
                                 onClick={() => setProvider('gemini')}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-300 ${provider === 'gemini' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-textMain hover:bg-white/5'} mr-1`}
+                                className={`px-2 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all duration-300 ${provider === 'gemini' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-textMain hover:bg-white/5'} mr-1`}
+                                title="Gemini"
                             >
-                                GEMINI
+                                <span className="sm:inline">GEMINI</span>
+                                <span className="sm:hidden text-lg leading-none">G</span>
                             </button>
 
                             {!isMultiplayer && (
                                 <button
                                     onClick={handleOpenRoomModal}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accentSec/10 text-accentSec border border-accentSec/20 hover:bg-accentSec/20 hover:border-accentSec/40 transition-all duration-300 ml-1"
+                                    title="Invite Friends"
+                                    className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-semibold bg-accentSec/10 text-accentSec border border-accentSec/20 hover:bg-accentSec/20 hover:border-accentSec/40 transition-all duration-300 ml-1"
                                 >
-                                    <Users size={14} /> Invite Friends
-                                </button>
-                            )}
-
-                            {!isMultiplayer && (
-                                <button
-                                    onClick={handleClearChat}
-                                    title="Clear Chat"
-                                    className="text-textSec hover:text-danger p-2 rounded-lg hover:bg-danger/10 transition-colors ml-1"
-                                >
-                                    <Trash2 size={16} />
+                                    <Users size={14} /> <span className="hidden md:inline">Invite Friends</span>
                                 </button>
                             )}
                         </div>
@@ -345,46 +340,36 @@ const Chat: React.FC = () => {
 
                 {/* Multiplayer Status Banner */}
                 {isMultiplayer && (
-                    <div className="bg-accentSec/5 border-b border-accentSec/10 px-6 py-2.5 flex justify-between items-center backdrop-blur-sm z-10 shrink-0">
-                        <div className={`flex items-center gap-2 text-sm font-medium ${isConnected ? 'text-success' : 'text-danger'}`}>
+                    <div className="bg-accentSec/5 border-b border-accentSec/10 px-4 md:px-6 py-2.5 flex flex-wrap justify-between items-center backdrop-blur-sm z-10 shrink-0 gap-2">
+                        <div className={`flex items-center gap-2 text-xs md:sm font-medium ${isConnected ? 'text-success' : 'text-danger'}`}>
                             <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'bg-danger shadow-[0_0_8px_rgba(244,63,94,0.8)]'} animate-pulse`}></div>
-                            <span>Collaborative Session {isConnected ? '(Live)' : '(Connecting...)'}</span>
-                            {wsError && <span className="text-danger ml-2">{wsError}</span>}
+                            <span className="truncate max-w-[150px]">{isConnected ? 'Collaborative (Live)' : 'Connecting...'}</span>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5 overflow-x-auto custom-scrollbar no-scrollbar pb-0.5">
                             <button
                                 onClick={handleCopyLink}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-accentSec/10 text-accentSec rounded-lg text-xs font-bold border border-accentSec/20 hover:bg-accentSec/20 transition-all"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-accentSec/10 text-accentSec rounded-lg text-[10px] md:text-xs font-bold border border-accentSec/20 hover:bg-accentSec/20 transition-all shrink-0"
                             >
-                                {copied ? <CheckCircle2 size={14} className="text-success" /> : <Copy size={14} />}
-                                {copied ? 'Copied URL' : 'Invite'}
+                                {copied ? <CheckCircle2 size={12} className="text-success" /> : <Copy size={12} />}
+                                <span>{copied ? 'Copied' : 'Invite'}</span>
                             </button>
                             <button
                                 onClick={() => {
                                     setShowVault(!showVault);
                                     if (!showVault) fetchVaultData();
                                 }}
-                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${showVault ? 'bg-purple-500/20 text-purple-300 border-purple-500/40 shadow-[0_0_10px_rgba(168,85,247,0.2)]' : 'bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500/20'}`}
+                                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] md:text-xs font-bold border transition-all shrink-0 ${showVault ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' : 'bg-purple-500/10 text-purple-400 border-purple-500/20'}`}
                             >
-                                <FileBox size={14} /> Shared Vault
+                                <FileBox size={12} /> <span className="hidden sm:inline">Shared Vault</span>
                             </button>
                             <button
                                 onClick={() => showVideo ? endCall() : startCall(roomId!)}
-                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all duration-500 relative group overflow-hidden ${
-                                    showVideo 
-                                    ? 'bg-danger/20 text-danger border-danger/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]' 
-                                    : 'bg-success/10 text-success border-success/20 hover:bg-success/20 hover:border-success/40'
+                                className={`flex items-center gap-1.5 px-2.5 md:px-4 py-1.5 rounded-lg md:rounded-xl text-[10px] md:text-xs font-bold border transition-all duration-500 bg-success/10 text-success border-success/20 shrink-0 ${
+                                    showVideo ? 'bg-danger/20 text-danger border-danger/30' : ''
                                 }`}
                             >
-                                {!showVideo && <div className="absolute inset-0 bg-success/20 animate-ping opacity-20 pointer-events-none"></div>}
-                                {showVideo ? (
-                                    <motion.div initial={{ rotate: 0 }} animate={{ rotate: 180 }} transition={{ duration: 0.5 }}>
-                                        <VideoOff size={16} />
-                                    </motion.div>
-                                ) : (
-                                    <Video size={16} className="group-hover:scale-110 transition-transform" />
-                                )}
-                                <span className="relative z-10">{showVideo ? 'End Call' : 'Join Video'}</span>
+                                {showVideo ? <VideoOff size={12} /> : <Video size={12} />}
+                                <span>{showVideo ? (window.innerWidth < 640 ? 'End' : 'End Call') : (window.innerWidth < 640 ? 'Video' : 'Join Video')}</span>
                             </button>
                             <button
                                 onClick={async () => {
@@ -398,7 +383,7 @@ const Chat: React.FC = () => {
                                     setSearchParams({});
                                     window.dispatchEvent(new Event('rooms-updated'));
                                 }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 bg-danger/10 text-danger rounded-lg text-xs font-bold border border-danger/20 hover:bg-danger/20 transition-all"
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-danger/10 text-danger rounded-lg text-[10px] md:text-xs font-bold border border-danger/20 hover:bg-danger/20 transition-all shrink-0"
                             >
                                 Leave
                             </button>
@@ -436,7 +421,7 @@ const Chat: React.FC = () => {
                                     key={msg.id || i}
                                     initial={{ opacity: 0, y: 15 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className={`flex flex-col gap-2 max-w-[85%] lg:max-w-[75%] ${isRightSide ? 'self-end' : 'self-start'}`}
+                                    className={`flex flex-col gap-2 max-w-[92%] md:max-w-[85%] lg:max-w-[75%] ${isRightSide ? 'self-end' : 'self-start'}`}
                                 >
                                     {isMultiplayer && (
                                         <div className={`text-xs font-bold px-1 ${isRightSide ? 'self-end' : 'self-start'} ${isUser ? (isMe ? 'text-accentSec' : 'text-purple-400') : 'text-accentGlow'}`}>
@@ -595,11 +580,13 @@ const Chat: React.FC = () => {
             <AnimatePresence>
                 {isMultiplayer && showVault && (
                     <motion.div
-                        initial={{ width: 0, opacity: 0, marginLeft: 0 }}
-                        animate={{ width: 340, opacity: 1, marginLeft: 24 }}
-                        exit={{ width: 0, opacity: 0, marginLeft: 0 }}
-                        className="glass-panel flex flex-col overflow-hidden shadow-2xl z-20 shrink-0 h-full border-l border-white/10 relative"
+                        initial={{ x: '100%', opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        exit={{ x: '100%', opacity: 0 }}
+                        className="glass-panel fixed md:relative right-0 top-0 bottom-0 z-[100] md:z-20 w-[min(90vw,340px)] md:w-[340px] flex flex-col overflow-hidden shadow-2xl md:ml-6 border-l border-white/10"
                     >
+                        {/* Overlay for mobile */}
+                        <div className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm -z-10" onClick={() => setShowVault(false)}></div>
                         <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/10 rounded-full blur-[60px] -z-10 pointer-events-none"></div>
 
                         <div className="p-5 border-b border-white/10 bg-black/20 backdrop-blur-md">

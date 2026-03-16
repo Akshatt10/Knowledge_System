@@ -128,17 +128,17 @@ const Login: React.FC = () => {
                 initial={{ opacity: 0, y: 30, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className="glass-panel w-full max-w-[440px] p-10 relative z-10 box-border shadow-2xl"
+                className="glass-panel w-full max-w-[440px] p-6 sm:p-10 relative z-10 box-border shadow-2xl"
             >
-                <div className="text-center mb-10">
-                    <div className="w-16 h-16 mx-auto mb-5 flex items-center justify-center rounded-2xl bg-accent-gradient shadow-glow relative">
+                <div className="text-center mb-8 sm:mb-10">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 sm:mb-5 flex items-center justify-center rounded-2xl bg-accent-gradient shadow-glow relative">
                         <div className="absolute inset-0 bg-white/20 rounded-2xl animate-ping opacity-20"></div>
-                        <Sparkles size={32} className="text-white drop-shadow-md relative z-10" />
+                        <Sparkles size={28} className="sm:size-[32px] text-white drop-shadow-md relative z-10" />
                     </div>
-                    <h1 className="text-3xl font-outfit font-bold tracking-tight text-white mb-2">
+                    <h1 className="text-2xl sm:text-3xl font-outfit font-bold tracking-tight text-white mb-2">
                         {isLogin ? 'Welcome Back' : 'Create Account'}
                     </h1>
-                    <p className="text-textSec text-sm font-medium">
+                    <p className="text-textSec text-[11px] sm:text-sm font-medium">
                         Nexus Intelligence System
                     </p>
                 </div>

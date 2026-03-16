@@ -208,43 +208,36 @@ const Connectors: React.FC = () => {
 
         return (
             <div className="glass-panel p-6 rounded-2xl">
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                        <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center`}>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+                    <div className="flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl ${iconBg} flex items-center justify-center shrink-0`}>
                             {icon}
                         </div>
                         <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                                 <h3 className="text-lg font-semibold text-textMain">{label}</h3>
                                 {provider === 'google_drive' && (
-                                    <div className="flex flex-col gap-1">
-                                        <span className="w-fit text-[0.6rem] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-tighter font-bold flex items-center gap-1">
-                                            <Sparkles size={10} /> Beta Test
-                                        </span>
-                                    </div>
+                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 uppercase tracking-tighter font-bold flex items-center gap-1">
+                                        <Sparkles size={10} /> Beta
+                                    </span>
                                 )}
                             </div>
-                            <p className="text-xs text-textSec mb-1">{description}</p>
-                            {provider === 'google_drive' && (
-                                <p className="text-[0.65rem] text-amber-400/70 italic leading-tight max-w-[200px]">
-                                    App is currently unverified. Use for testing only.
-                                </p>
-                            )}
+                            <p className="text-xs text-textSec leading-tight sm:max-w-xs">{description}</p>
                         </div>
                     </div>
 
                     {connected ? (
-                        <span className="flex items-center gap-1.5 text-xs font-medium text-success bg-success/10 px-3 py-1.5 rounded-full">
-                            <CheckCircle2 size={14} />
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-success bg-success/10 px-4 py-2 rounded-full border border-success/20 w-full sm:w-auto justify-center">
+                            <CheckCircle2 size={16} />
                             Connected
                         </span>
                     ) : (
                         <button
                             onClick={() => handleConnect(providerKey)}
-                            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-accent-gradient text-white text-sm font-semibold shadow-glow hover:opacity-90 transition-all"
+                            className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-accent-gradient text-white text-sm font-semibold shadow-glow hover:opacity-90 transition-all w-full sm:w-auto justify-center"
                         >
-                            <ExternalLink size={16} />
-                            Connect
+                            <ExternalLink size={18} />
+                            Connect Account
                         </button>
                     )}
                 </div>
@@ -262,26 +255,26 @@ const Connectors: React.FC = () => {
                             </span>
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="flex flex-col sm:flex-row gap-3">
                             <button
                                 onClick={() => handleBrowseFiles(pickerProvider)}
                                 disabled={loadingFiles}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-accentGlow/10 text-accentGlow text-sm font-medium hover:bg-accentGlow/20 transition-all disabled:opacity-50"
+                                className="flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-accentGlow/10 text-accentGlow text-sm font-semibold hover:bg-accentGlow/20 transition-all disabled:opacity-50 justify-center"
                             >
                                 {loadingFiles && activePicker === pickerProvider ? (
-                                    <Loader2 size={16} className="animate-spin" />
+                                    <Loader2 size={18} className="animate-spin" />
                                 ) : (
-                                    <FolderSync size={16} />
+                                    <FolderSync size={18} />
                                 )}
                                 Browse & Import
                             </button>
 
                             <button
                                 onClick={() => handleDisconnect(account.id)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-danger/10 text-danger text-sm font-medium hover:bg-danger/20 transition-all"
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-danger/10 text-danger text-sm font-semibold hover:bg-danger/20 transition-all justify-center sm:w-auto"
                             >
-                                <Trash2 size={16} />
-                                Disconnect
+                                <Trash2 size={18} />
+                                <span className="sm:hidden">Disconnect Account</span>
                             </button>
                         </div>
                     </div>
@@ -299,29 +292,25 @@ const Connectors: React.FC = () => {
                             <div className="pt-6 space-y-4">
                                 {remoteFiles.length > 0 ? (
                                     <>
-                                        <div className="flex items-center justify-between">
-                                            <h3 className="text-textMain text-sm font-semibold flex items-center gap-2">
+                                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                            <h3 className="text-textMain text-sm font-semibold flex items-center gap-2 shrink-0">
                                                 <FileText size={16} className="text-accentGlow" />
                                                 Available Files ({remoteFiles.length})
                                             </h3>
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
                                                 <button
                                                     onClick={toggleAll}
-                                                    className="text-[0.65rem] text-textSec hover:text-textMain transition-colors uppercase tracking-wider font-bold"
+                                                    className="text-[10px] text-textSec hover:text-textMain transition-colors uppercase tracking-widest font-bold"
                                                 >
-                                                    {selectedFiles.size === remoteFiles.length ? 'Deselect All' : 'Select All'}
+                                                    {selectedFiles.size === remoteFiles.length ? 'None' : 'All'}
                                                 </button>
                                                 <button
                                                     onClick={handleSyncSelected}
                                                     disabled={selectedFiles.size === 0 || syncing}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent-gradient text-white text-xs font-bold shadow-glow hover:opacity-90 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                                    className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-accent-gradient text-white text-xs font-bold shadow-glow hover:opacity-90 transition-all disabled:opacity-40"
                                                 >
-                                                    {syncing ? (
-                                                        <Loader2 size={12} className="animate-spin" />
-                                                    ) : (
-                                                        <FolderSync size={12} />
-                                                    )}
-                                                    {syncing ? 'Importing...' : `Import ${selectedFiles.size}`}
+                                                    {syncing ? <Loader2 size={14} className="animate-spin" /> : <FolderSync size={14} />}
+                                                    Import {selectedFiles.size > 0 ? `(${selectedFiles.size})` : ''}
                                                 </button>
                                             </div>
                                         </div>
@@ -400,15 +389,15 @@ const Connectors: React.FC = () => {
     };
 
     return (
-        <div className="flex-1 p-8 overflow-y-auto">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto w-full h-full">
             <div className="max-w-3xl mx-auto">
-                <div className="flex items-center gap-3 mb-2">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
                     <CloudCog size={32} className="text-accentGlow" />
-                    <h1 className="text-3xl font-outfit font-bold text-textMain">Connectors</h1>
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-outfit font-bold text-textMain">Connectors</h1>
+                        <p className="text-textSec text-xs md:text-sm">Connect sources and browse documents for your RAG pipeline.</p>
+                    </div>
                 </div>
-                <p className="text-textSec mb-8">
-                    Connect external knowledge sources. Browse and select documents to import into your RAG pipeline.
-                </p>
 
                 <AnimatePresence>
                     {successMsg && (
