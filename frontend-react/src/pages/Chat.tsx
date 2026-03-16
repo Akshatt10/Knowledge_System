@@ -43,7 +43,6 @@ const Chat: React.FC = () => {
         disconnect,
         messages: wsMessages,
         isConnected,
-        error: wsError,
         sendMessage: sendWsMessage,
         setInitialHistory
     } = useWebSocket();
@@ -56,7 +55,6 @@ const Chat: React.FC = () => {
         setProvider, 
         sendQuery, 
         giveFeedback,
-        clearChat,
         selectedFolderId,
         setSelectedFolderId
     } = useChat();
@@ -136,10 +134,6 @@ const Chat: React.FC = () => {
         };
     }, [roomId, connectToRoom, disconnect, setInitialHistory]);
 
-    const handleClearChat = () => {
-        if (isMultiplayer) return;
-        clearChat();
-    };
 
     const handleOpenRoomModal = () => {
         setNewRoomName('');
