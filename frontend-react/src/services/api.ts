@@ -78,6 +78,7 @@ export const queryService = {
         callbacks: {
             onToken: (token: string) => void;
             onSources: (sources: any[]) => void;
+            onAnalytics: (data: any) => void;
             onDone: () => void;
             onError: (error: string) => void;
         }
@@ -123,6 +124,7 @@ export const queryService = {
                 buffer = lines.pop() || '';
 
                 for (const line of lines) {
+                    if (line.trim() === '') continue;
                     if (line.startsWith('data: ')) {
                         try {
                             const event = JSON.parse(line.slice(6));
@@ -130,6 +132,8 @@ export const queryService = {
                                 callbacks.onToken(event.content);
                             } else if (event.type === 'sources') {
                                 callbacks.onSources(event.sources || []);
+                            } else if (event.type === 'analytics') {
+                                callbacks.onAnalytics(event);
                             } else if (event.type === 'done') {
                                 callbacks.onDone();
                             }
@@ -143,6 +147,9 @@ export const queryService = {
             callbacks.onError(err.message || 'Stream connection failed');
         }
     },
+
+    giveFeedback: (queryId: string, feedback: number) => 
+        api.post(`/query/${queryId}/feedback`, { feedback }),
 };
 
 // Folder Services
@@ -164,6 +171,7 @@ export const adminService = {
         api.patch(`/admin/users/${id}`, data),
     deleteUser: (id: string) => api.delete(`/admin/users/${id}`),
     getTimeSeriesStats: (period: string) => api.get(`/admin/stats/time-series?period=${period}`),
+    getFeedbackStats: () => api.get('/admin/feedback/stats'),
 };
 
 // Room / Multiplayer Services
@@ -200,6 +208,7 @@ export const connectorService = {
 
 export const graphService = {
     getGraphData: () => api.get('/graph/'),
+    recomputeGraph: () => api.post('/graph/recompute'),
 };
 
 export default api;

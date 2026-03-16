@@ -21,3 +21,17 @@ def get_graph_data(
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/recompute")
+def recompute_graph(
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Triggers the semantic discovery process to find relationships between documents.
+    """
+    try:
+        edges_created = graph_service.compute_semantic_discovery(db, current_user.id)
+        return {"message": "Success", "edges_created": edges_created}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

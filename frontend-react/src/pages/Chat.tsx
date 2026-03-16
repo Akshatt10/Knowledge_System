@@ -16,7 +16,11 @@ import {
     Video,
     VideoOff,
     Folder as FolderIcon,
-    ChevronDown
+    ChevronDown,
+    ThumbsUp,
+    ThumbsDown,
+    ShieldCheck,
+    AlertTriangle
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { roomService, documentService, folderService } from '../services/api';
@@ -51,6 +55,7 @@ const Chat: React.FC = () => {
         provider, 
         setProvider, 
         sendQuery, 
+        giveFeedback,
         clearChat,
         selectedFolderId,
         setSelectedFolderId
@@ -404,9 +409,10 @@ const Chat: React.FC = () => {
                 {/* Messages Container */}
                 <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 lg:px-12 flex flex-col gap-6 custom-scrollbar relative z-0">
                     <AnimatePresence initial={false}>
-                        {displayMessages.map((msg, i) => {
+                        {displayMessages.map((msg: any, i) => {
                             const isUser = msg.role === 'user';
                             const isSystem = msg.role === 'system';
+                            const isAi = msg.role === 'ai' || msg.role === 'assistant';
                             const content = msg.content;
                             const isMe = msg.sender === user?.email.split('@')[0];
                             const senderName = isUser ? (isMe ? 'You' : msg.sender) : (isSystem ? 'System' : 'Intelligence Agent');
@@ -439,8 +445,8 @@ const Chat: React.FC = () => {
                                     )}
 
                                     <div className={`flex gap-3 md:gap-4 ${isRightSide ? 'flex-row-reverse' : 'flex-row'}`}>
-                                        <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center shadow-md ${!isUser ? 'bg-accentGlow/10 border border-accentGlow/30' : 'bg-white/5 border border-white/10'}`}>
-                                            {!isUser ? <Sparkles size={20} className="text-accentGlow drop-shadow-glow" /> : <UserIcon size={20} className="text-textMain/80" />}
+                                        <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center shadow-md ${isAi ? 'bg-accentGlow/10 border border-accentGlow/30' : 'bg-white/5 border border-white/10'}`}>
+                                            {isAi ? <Sparkles size={20} className="text-accentGlow drop-shadow-glow" /> : <UserIcon size={20} className="text-textMain/80" />}
                                         </div>
 
                                         <div className={`group relative p-5 rounded-2xl border ${isRightSide ? 'bg-accentSec/10 border-accentSec/30 rounded-tr-sm backdrop-blur-md' : 'bg-black/40 border-white/10 rounded-tl-sm backdrop-blur-md hover:border-white/20 transition-colors'}`}>
@@ -492,6 +498,48 @@ const Chat: React.FC = () => {
                                                         ))}
                                                     </div>
                                                 </details>
+                                            )}
+
+                                            {/* Confidence & Feedback Bar */}
+                                            {isAi && msg.query_id && (
+                                                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        {msg.confidence_score !== undefined && (
+                                                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.7rem] font-bold border transition-all ${
+                                                                msg.confidence_score >= 0.7 
+                                                                ? 'bg-success/5 border-success/20 text-success' 
+                                                                : msg.confidence_score >= 0.4 
+                                                                ? 'bg-warning/5 border-warning/20 text-warning' 
+                                                                : 'bg-danger/5 border-danger/20 text-danger'
+                                                            }`}>
+                                                                {msg.confidence_score >= 0.7 ? <ShieldCheck size={12} /> : <AlertTriangle size={12} />}
+                                                                Confidence: {Math.round(msg.confidence_score * 100)}%
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center gap-1">
+                                                            <button 
+                                                                onClick={() => !isMultiplayer && giveFeedback(i, 1)}
+                                                                className={`p-1.5 rounded-lg transition-all ${msg.feedback === 1 ? 'bg-success/20 text-success shadow-glow' : 'text-textSec hover:text-success hover:bg-success/10'}`}
+                                                                disabled={isMultiplayer}
+                                                                title="Trustworthy"
+                                                            >
+                                                                <ThumbsUp size={14} className={msg.feedback === 1 ? 'fill-current' : ''} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => !isMultiplayer && giveFeedback(i, -1)}
+                                                                className={`p-1.5 rounded-lg transition-all ${msg.feedback === -1 ? 'bg-danger/20 text-danger shadow-glow' : 'text-textSec hover:text-danger hover:bg-danger/10'}`}
+                                                                disabled={isMultiplayer}
+                                                                title="Inaccurate"
+                                                            >
+                                                                <ThumbsDown size={14} className={msg.feedback === -1 ? 'fill-current' : ''} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="text-[0.65rem] text-textSec/40 font-mono tracking-tighter">
+                                                        REF: {msg.query_id.split('-')[0]}
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                     </div>

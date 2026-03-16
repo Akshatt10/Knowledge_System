@@ -4,37 +4,43 @@ from __future__ import annotations
 
 import logging
 import uuid
+import json
+from datetime import datetime
 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import StreamingResponse
 from app.services.auth import get_current_user, get_db
-from app.models.database import User, QueryLog
+from app.models.database import User, QueryLog, QueryFeedback
 from sqlalchemy.orm import Session
 
-from app.models.schemas import QueryRequest, QueryResponse, SourceCitation
+from app.models.schemas import QueryRequest, QueryResponse, SourceCitation, FeedbackRequest
 from app.services.rag import rag_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Query"])
 
 
-def _log_query(db: Session, user_id: str, question: str, analytics: dict):
-    """Persist a QueryLog record for analytics."""
+def _log_query(db: Session, user_id: str, question: str, analytics: dict) -> str | None:
+    """Persist a QueryLog record for analytics and return its ID."""
     try:
+        log_id = str(uuid.uuid4())
         log = QueryLog(
-            id=str(uuid.uuid4()),
+            id=log_id,
             user_id=user_id,
             question=question,
             provider=analytics.get("provider", "unknown"),
             latency_ms=analytics.get("latency_ms", 0),
             chunks_retrieved=analytics.get("chunks_retrieved", 0),
             had_answer=analytics.get("had_answer", False),
+            confidence_score=analytics.get("confidence_score", 0.0),
         )
         db.add(log)
         db.commit()
+        return log_id
     except Exception as e:
         logger.error("Failed to persist QueryLog: %s", e)
         db.rollback()
+        return None
 
 
 @router.post("/query", response_model=QueryResponse)
@@ -58,8 +64,11 @@ async def ask_question(
         raise HTTPException(status_code=500, detail=f"Query error: {exc}")
 
     # Log query analytics
+    query_id = None
+    confidence_score = None
     if "analytics" in result:
-        _log_query(db, str(current_user.id), payload.question, result["analytics"])
+        query_id = _log_query(db, str(current_user.id), payload.question, result["analytics"])
+        confidence_score = result["analytics"].get("confidence_score")
 
     sources = [
         SourceCitation(
@@ -70,7 +79,12 @@ async def ask_question(
         for s in result.get("sources", [])
     ]
 
-    return QueryResponse(answer=result["answer"], sources=sources)
+    return QueryResponse(
+        answer=result["answer"], 
+        sources=sources,
+        query_id=query_id,
+        confidence_score=confidence_score
+    )
 
 
 @router.get("/query/stream")
@@ -82,6 +96,7 @@ async def stream_question(
     db: Session = Depends(get_db),
 ):
     """SSE streaming endpoint for token-by-token RAG responses."""
+    query_id = str(uuid.uuid4())
 
     async def event_generator():
         analytics_data = {}
@@ -91,13 +106,13 @@ async def stream_question(
             user_id=str(current_user.id),
             provider=provider,
             folder_id=folder_id,
+            query_id=query_id,
             db=db,
         ):
             yield event
 
             # Capture analytics from the analytics event for logging
             if '"type": "analytics"' in event or '"type":"analytics"' in event:
-                import json
                 try:
                     # Parse the SSE data line
                     data_line = event.strip().replace("data: ", "", 1)
@@ -107,7 +122,23 @@ async def stream_question(
 
         # Log query after stream completes
         if analytics_data:
-            _log_query(db, str(current_user.id), question, analytics_data)
+            # Re-generate log but use the SAME query_id we sent to frontend
+            try:
+                log = QueryLog(
+                    id=query_id,
+                    user_id=str(current_user.id),
+                    question=question,
+                    provider=analytics_data.get("provider", provider),
+                    latency_ms=analytics_data.get("latency_ms", 0),
+                    chunks_retrieved=analytics_data.get("chunks_retrieved", 0),
+                    had_answer=analytics_data.get("had_answer", False),
+                    confidence_score=analytics_data.get("confidence_score", 0.0),
+                )
+                db.add(log)
+                db.commit()
+            except Exception as e:
+                logger.error("Failed to persist QueryLog: %s", e)
+                db.rollback()
 
     return StreamingResponse(
         event_generator(),
@@ -118,3 +149,34 @@ async def stream_question(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+@router.post("/query/{query_id}/feedback")
+async def give_feedback(
+    query_id: str,
+    payload: FeedbackRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Submit thumbs up (1) or thumbs down (-1) for a specific query."""
+    # Verify query exists and belongs to user
+    query = db.query(QueryLog).filter(QueryLog.id == query_id, QueryLog.user_id == str(current_user.id)).first()
+    if not query:
+        raise HTTPException(status_code=404, detail="Query log not found")
+
+    # Check for existing feedback to update or create new
+    existing = db.query(QueryFeedback).filter(QueryFeedback.query_id == query_id).first()
+    if existing:
+        existing.feedback = payload.feedback
+        existing.created_at = datetime.utcnow()
+    else:
+        feedback = QueryFeedback(
+            id=str(uuid.uuid4()),
+            user_id=str(current_user.id),
+            query_id=query_id,
+            feedback=payload.feedback
+        )
+        db.add(feedback)
+    
+    db.commit()
+    return {"status": "success", "feedback": payload.feedback}

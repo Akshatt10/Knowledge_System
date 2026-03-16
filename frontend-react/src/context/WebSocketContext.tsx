@@ -14,6 +14,10 @@ interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
     sender?: string;
+    sources?: any[];
+    query_id?: string;
+    confidence_score?: number;
+    feedback?: number;
 }
 
 interface WebSocketContextType {

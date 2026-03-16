@@ -102,6 +102,7 @@ class QueryLog(Base):
     latency_ms = Column(Integer)           # end-to-end response time in milliseconds
     chunks_retrieved = Column(Integer)     # number of context chunks found
     had_answer = Column(Boolean)           # False if "couldn't find information"
+    confidence_score = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -125,4 +126,15 @@ class GraphEdge(Base):
     relationship = Column(String, nullable=False)
     weight = Column(Float, default=1.0)
     chunk_id = Column(String(36), nullable=True)  # chunk where relationship was found
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class QueryFeedback(Base):
+    """Stores user feedback (thumbs up/down) for AI answers."""
+    __tablename__ = "query_feedbacks"
+
+    id = Column(String(36), primary_key=True, index=True)
+    user_id = Column(String(36), index=True, nullable=False)
+    query_id = Column(String(36), index=True, nullable=False) # Linked to QueryLog.id
+    feedback = Column(Integer, nullable=False) # 1 for positive, -1 for negative
     created_at = Column(DateTime, default=datetime.utcnow)

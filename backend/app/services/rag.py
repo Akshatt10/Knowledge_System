@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import time
 import uuid
 from typing import AsyncGenerator, List, Dict
@@ -19,6 +20,13 @@ from app.services.vectorstore import vector_store
 from app.services.reranker import reranker_service
 
 logger = logging.getLogger(__name__)
+
+
+def sigmoid(x: float) -> float:
+    """Normalize a logit score into a probability range [0, 1]."""
+    if x > 20: return 1.0
+    if x < -20: return 0.0
+    return 1 / (1 + math.exp(-x))
 
 
 SYSTEM_PROMPT = """
@@ -160,7 +168,9 @@ class RAGService:
         for i, doc in enumerate(docs):
             filename = doc.metadata.get("filename", "Unknown Source")
             content = doc.page_content.strip()
-            relevance_score = doc.metadata.get("relevance_score", doc.metadata.get("score", 0.0))
+            # Normalize scores from re-ranker logits
+            raw_score = doc.metadata.get("relevance_score", doc.metadata.get("score", 0.0))
+            relevance_score = sigmoid(raw_score) if "relevance_score" in doc.metadata else raw_score
 
             context_parts.append(
                 f"[SOURCE {i+1}: {filename}]\n{content}"
@@ -249,6 +259,22 @@ Answer the question using ONLY the context above.
         latency_ms = int((time.time() - start_time) * 1000)
         had_answer = "couldn't find this information" not in answer_text.lower()
 
+        # ── Confidence Calculation ─────────────────────────────────────
+        confidence_score = 0.0
+        if had_answer and docs:
+            # Derive from re-ranker scores if available, else use chunk density
+            scores = [d.metadata.get("relevance_score", d.metadata.get("score", 0.0)) for d in docs]
+            if any(s > 0 for s in scores):
+                # Normalize re-ranker scores (assumed range roughly 0-1 or high-neg to high-pos)
+                # For simplicity, we avg top 3 and cap
+                avg_score = sum(sorted(scores, reverse=True)[:3]) / 3.0
+                confidence_score = min(1.0, max(0.0, avg_score))
+            else:
+                # Fallback to chunk density score: len(docs)/5.0
+                confidence_score = min(1.0, len(docs) / 5.0)
+        
+        confidence_score = round(confidence_score, 2)
+
         return {
             "answer": answer_text,
             "sources": sources_meta,
@@ -257,6 +283,7 @@ Answer the question using ONLY the context above.
                 "chunks_retrieved": len(docs),
                 "had_answer": had_answer,
                 "provider": provider,
+                "confidence_score": confidence_score,
             },
         }
 
@@ -266,10 +293,11 @@ Answer the question using ONLY the context above.
         self,
         question: str,
         user_id: str,
-        chat_history: list[dict[str, str]] | None = None,
+        chat_history: list = None,
         provider: str = "openai",
-        folder_id: str | None = None,
-        db=None,
+        folder_id: str = None,
+        query_id: str = None,
+        db: Session = None,
     ) -> AsyncGenerator[str, None]:
         """Execute RAG pipeline and yield SSE events token-by-token.
 
@@ -286,7 +314,7 @@ Answer the question using ONLY the context above.
             no_answer = "I couldn't find this information in your documents." if not docs else "This folder is empty. Please add some documents to it first."
             yield f'data: {json.dumps({"type": "token", "content": no_answer})}\n\n'
             yield f'data: {json.dumps({"type": "sources", "sources": []})}\n\n'
-            yield f'data: {json.dumps({"type": "analytics", "latency_ms": int((time.time() - start_time) * 1000), "chunks_retrieved": 0, "had_answer": False, "provider": provider})}\n\n'
+            yield f'data: {json.dumps({"type": "analytics", "query_id": query_id, "latency_ms": int((time.time() - start_time) * 1000), "chunks_retrieved": 0, "had_answer": False, "provider": provider})}\n\n'
             yield 'data: {"type": "done"}\n\n'
             return
 
@@ -332,8 +360,22 @@ Answer the question using ONLY the context above.
         latency_ms = int((time.time() - start_time) * 1000)
         had_answer = "couldn't find this information" not in full_response.lower()
 
+        # ── Confidence Calculation ─────────────────────────────────────
+        confidence_score = 0.0
+        if had_answer and docs:
+            # Use normalized scores for a meaningful average
+            norm_scores = [sigmoid(d.metadata.get("relevance_score", d.metadata.get("score", 0.0))) 
+                          if "relevance_score" in d.metadata else d.metadata.get("score", 0.0) 
+                          for d in docs]
+            
+            if norm_scores:
+                avg_score = sum(sorted(norm_scores, reverse=True)[:3]) / min(3, len(norm_scores))
+                confidence_score = min(1.0, max(0.0, avg_score))
+        
+        confidence_score = round(confidence_score, 2)
+
         yield f'data: {json.dumps({"type": "sources", "sources": sources_meta})}\n\n'
-        yield f'data: {json.dumps({"type": "analytics", "latency_ms": latency_ms, "chunks_retrieved": len(docs), "had_answer": had_answer, "provider": actual_provider})}\n\n'
+        yield f'data: {json.dumps({"type": "analytics", "query_id": query_id, "latency_ms": latency_ms, "chunks_retrieved": len(docs), "had_answer": had_answer, "provider": actual_provider, "confidence_score": confidence_score})}\n\n'
         yield 'data: {"type": "done"}\n\n'
 
 

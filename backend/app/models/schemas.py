@@ -110,10 +110,25 @@ class SourceCitation(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    """AI-generated answer plus source citations."""
+    """AI-generated answer plus source citations and reliability metrics."""
 
     answer: str
     sources: list[SourceCitation]
+    query_id: str | None = None
+    confidence_score: float | None = None
+
+
+class FeedbackRequest(BaseModel):
+    """User feedback for a query."""
+    feedback: int = Field(..., description="1 for thumbs up, -1 for thumbs down")
+
+
+class FeedbackStatsResponse(BaseModel):
+    """Aggregated feedback metrics."""
+    total_positive: int
+    total_negative: int
+    positive_rate_percent: float
+    breakdown_by_folder: list[dict] | None = None
 
 
 # ── Admin Endpoints ────────────────────────────────────────────────────
