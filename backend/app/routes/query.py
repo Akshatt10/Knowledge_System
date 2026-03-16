@@ -151,6 +151,20 @@ async def stream_question(
     )
 
 
+@router.get("/query/history")
+async def get_query_history(
+    limit: int = Query(10, gt=0, le=100),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Retrieve the recent query history for the current user."""
+    queries = db.query(QueryLog).filter(
+        QueryLog.user_id == str(current_user.id)
+    ).order_by(QueryLog.created_at.desc()).limit(limit).all()
+    
+    return queries
+
+
 @router.post("/query/{query_id}/feedback")
 async def give_feedback(
     query_id: str,

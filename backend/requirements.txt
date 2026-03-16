@@ -33,3 +33,6 @@ slack-sdk
 redis
 gunicorn
 livekit-api
+numpy
+beautifulsoup4
+pinecone-text

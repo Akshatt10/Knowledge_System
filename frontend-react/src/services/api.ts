@@ -211,4 +211,9 @@ export const graphService = {
     recomputeGraph: () => api.post('/graph/recompute'),
 };
 
+export const homeService = {
+    getStats: () => api.get('/cli/status'),
+    getHistory: (limit: number = 5) => api.get(`/query/history?limit=${limit}`),
+};
+
 export default api;

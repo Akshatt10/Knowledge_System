@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
+import Home from './pages/Home';
 import Chat from './pages/Chat';
 import KnowledgeBase from './pages/KnowledgeBase';
 import KnowledgeGraph from './pages/KnowledgeGraph';
@@ -37,6 +38,14 @@ const App: React.FC = () => {
             <Route path="/login" element={<Login />} />
 
             {/* Protected Application Routes */}
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute>
+                  <MainLayout><Home /></MainLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/chat"
               element={
@@ -87,8 +96,8 @@ const App: React.FC = () => {
             />
 
             {/* Default Redirects */}
-            <Route path="/" element={<Navigate to="/chat" replace />} />
-            <Route path="*" element={<Navigate to="/chat" replace />} />
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
           </BrowserRouter>
           </VideoCallProvider>

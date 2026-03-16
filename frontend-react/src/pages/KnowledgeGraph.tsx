@@ -31,6 +31,7 @@ const KnowledgeGraph: React.FC = () => {
     const [highlightNodes, setHighlightNodes] = useState<Set<string>>(new Set());
     const [highlightLinks, setHighlightLinks] = useState<Set<any>>(new Set());
     const [isRecomputing, setIsRecomputing] = useState(false);
+    const [hasInitialCentered, setHasInitialCentered] = useState(false);
     const fgRef = useRef<any>();
 
     const fetchGraph = async () => {
@@ -45,6 +46,7 @@ const KnowledgeGraph: React.FC = () => {
                 }))
             };
             setGraphData(data);
+            setHasInitialCentered(false); // Reset when data changes
         } catch (err: any) {
             setError(err.message || 'Failed to load graph');
         } finally {
@@ -63,6 +65,13 @@ const KnowledgeGraph: React.FC = () => {
             fgRef.current.d3Force('link').distance(90);    // Even longer links
         }
     }, [graphData]);
+
+    const handleEngineStop = () => {
+        if (!hasInitialCentered && fgRef.current && graphData.nodes.length > 0) {
+            fgRef.current.zoomToFit(800, 150);
+            setHasInitialCentered(true);
+        }
+    };
 
     const handleRecompute = async () => {
         if (isRecomputing) return;
@@ -258,6 +267,7 @@ const KnowledgeGraph: React.FC = () => {
                     setHighlightNodes(new Set());
                     setHighlightLinks(new Set());
                 }}
+                onEngineStop={handleEngineStop}
                 cooldownTicks={150}
                 d3VelocityDecay={0.4}
                 d3AlphaDecay={0.01}

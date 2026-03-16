@@ -22,7 +22,7 @@ const Login: React.FC = () => {
     const location = useLocation();
     const [searchParams] = useSearchParams();
 
-    const fromPath = (location.state as any)?.from?.pathname || '/chat';
+    const fromPath = (location.state as any)?.from?.pathname || '/home';
     const fromSearch = (location.state as any)?.from?.search || '';
     const destination = `${fromPath}${fromSearch}`;
 
@@ -47,7 +47,7 @@ const Login: React.FC = () => {
             if (ssoName) localStorage.setItem('name', ssoName);
             setAuth(ssoToken, ssoRole, ssoEmail, ssoName || undefined);
             // Small delay so AuthContext state propagates before route change
-            setTimeout(() => navigate('/chat', { replace: true }), 50);
+            setTimeout(() => navigate('/home', { replace: true }), 50);
         }
     }, []);
 

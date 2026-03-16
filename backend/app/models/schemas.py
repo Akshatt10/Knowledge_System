@@ -195,6 +195,12 @@ class TimeSeriesResponse(BaseModel):
     ai_queries: list[DataPoint]
 
 
+class CLIStatusResponse(BaseModel):
+    """Summarized status for the Home dashboard and CLI."""
+    total_docs: int
+    queries_this_week: int
+    vault_health: float  # average confidence of last 20 queries
+
 # ── Graph Endpoints ───────────────────────────────────────────────────
 
 class GraphNodeInfo(BaseModel):
