@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
     MessageSquare, 
     FileText, 
@@ -8,14 +8,11 @@ import {
     Folder, 
     Plus,
     Flame,
-    Zap,
     History,
     Star,
     Share2,
     Activity,
-    Layers,
-    ChevronRight,
-    Search
+    Layers
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { homeService, folderService } from '../services/api';
@@ -120,12 +117,12 @@ const Home: React.FC = () => {
             opacity: 1,
             transition: { staggerChildren: 0.1, delayChildren: 0.1 }
         }
-    };
+    } as const;
 
     const itemVariants = {
         hidden: { opacity: 0, y: 15 },
         visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
-    };
+    } as const;
 
     return (
         <div className="flex-1 p-6 md:p-10 lg:p-12 overflow-y-auto custom-scrollbar relative bg-[#070709]">
@@ -194,9 +191,9 @@ const Home: React.FC = () => {
                             icon: <HeartPulse size={22} className="text-emerald-400" />,
                             glow: 'bg-emerald-400/5'
                         }
-                    ].map((stat, idx) => (
+                    ].map((stat) => (
                         <motion.div 
-                            key={idx}
+                            key={stat.label}
                             variants={itemVariants}
                             whileHover={{ y: -3, backgroundColor: 'rgba(255,255,255,0.05)' }}
                             className="glass-panel p-6 rounded-2xl border border-white/5 bg-white/[0.02] relative overflow-hidden group transition-all"
@@ -257,7 +254,7 @@ const Home: React.FC = () => {
                         </motion.div>
                         <div className="space-y-4">
                             {history.length > 0 ? (
-                                history.map((item, idx) => (
+                                history.map((item) => (
                                     <motion.div
                                         key={item.id}
                                         variants={itemVariants}
