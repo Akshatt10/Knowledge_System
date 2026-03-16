@@ -110,10 +110,25 @@ class SourceCitation(BaseModel):
 
 
 class QueryResponse(BaseModel):
-    """AI-generated answer plus source citations."""
+    """AI-generated answer plus source citations and reliability metrics."""
 
     answer: str
     sources: list[SourceCitation]
+    query_id: str | None = None
+    confidence_score: float | None = None
+
+
+class FeedbackRequest(BaseModel):
+    """User feedback for a query."""
+    feedback: int = Field(..., description="1 for thumbs up, -1 for thumbs down")
+
+
+class FeedbackStatsResponse(BaseModel):
+    """Aggregated feedback metrics."""
+    total_positive: int
+    total_negative: int
+    positive_rate_percent: float
+    breakdown_by_folder: list[dict] | None = None
 
 
 # ── Admin Endpoints ────────────────────────────────────────────────────
@@ -178,3 +193,32 @@ class TimeSeriesResponse(BaseModel):
     document_growth: list[DataPoint]
     active_users: list[DataPoint]
     ai_queries: list[DataPoint]
+
+
+class CLIStatusResponse(BaseModel):
+    """Summarized status for the Home dashboard and CLI."""
+    total_docs: int
+    queries_this_week: int
+    vault_health: float  # average confidence of last 20 queries
+
+# ── Graph Endpoints ───────────────────────────────────────────────────
+
+class GraphNodeInfo(BaseModel):
+    id: str
+    label: str  # maps to entity_name / filename
+    type: str   # 'document', 'folder', 'concept', 'person', etc.
+    document_id: str | None = None
+    folder_id: str | None = None
+    chunk_count: int | None = None
+
+class GraphEdgeInfo(BaseModel):
+    id: str
+    source: str
+    target: str
+    label: str  # relationship
+    weight: float = 1.0
+    chunk_id: str | None = None
+
+class GraphDataResponse(BaseModel):
+    nodes: list[GraphNodeInfo]
+    edges: list[GraphEdgeInfo]

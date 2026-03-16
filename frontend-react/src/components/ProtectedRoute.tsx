@@ -18,7 +18,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
 
     if (adminOnly && !isAdmin) {
         // If not admin, redirect to chat
-        return <Navigate to="/chat" replace />;
+        return <Navigate to="/home" replace />;
     }
 
     return <>{children}</>;

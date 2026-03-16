@@ -20,7 +20,9 @@ import {
     Server,
     Database,
     LineChart,
-    Cpu
+    Cpu,
+    ThumbsUp,
+    HeartPulse
 } from 'lucide-react';
 import { adminService } from '../services/api';
 
@@ -34,6 +36,12 @@ interface Stats {
 interface DataPoint {
     timestamp: string;
     value: number;
+}
+
+interface FeedbackStats {
+    total_positive: number;
+    total_negative: number;
+    positive_rate_percent: number;
 }
 
 interface TimeSeriesData {
@@ -58,16 +66,19 @@ const AdminStats: React.FC = () => {
         ai_queries: []
     });
     const [loadingSeries, setLoadingSeries] = useState(false);
+    const [feedbackStats, setFeedbackStats] = useState<FeedbackStats | null>(null);
 
     const loadData = async () => {
         setLoading(true);
         try {
-            const [statsRes, healthRes] = await Promise.all([
+            const [statsRes, healthRes, feedbackRes] = await Promise.all([
                 adminService.getStats(),
-                adminService.checkHealth()
+                adminService.checkHealth(),
+                adminService.getFeedbackStats()
             ]);
             setStats(statsRes.data);
             setHealth(healthRes.data.status === 'healthy' ? 'healthy' : 'error');
+            setFeedbackStats(feedbackRes.data);
         } catch {
             setHealth('error');
         } finally {
@@ -122,6 +133,15 @@ const AdminStats: React.FC = () => {
             borderClass: 'border-pink-500/30 group-hover:border-pink-400/50',
             textClass: 'text-pink-500',
             bgGlow: 'bg-pink-500/10'
+        },
+        {
+            label: 'Success Rate',
+            count: feedbackStats ? `${Math.round(feedbackStats.positive_rate_percent)}%` : '0%',
+            icon: <HeartPulse size={28} className="text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]" />,
+            colorClass: 'from-emerald-600/20 to-emerald-600/5',
+            borderClass: 'border-emerald-500/30 group-hover:border-emerald-400/50',
+            textClass: 'text-emerald-500',
+            bgGlow: 'bg-emerald-500/10'
         },
     ];
 
@@ -206,7 +226,7 @@ const AdminStats: React.FC = () => {
                                         {card.label}
                                     </p>
                                     <h3 className="text-3xl font-outfit font-bold text-white drop-shadow-md">
-                                        {loading ? <span className="animate-pulse">...</span> : card.count.toLocaleString()}
+                                        {loading ? <span className="animate-pulse">...</span> : card.count}
                                     </h3>
                                 </div>
                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center border border-white/5 ${card.bgGlow}`}>
@@ -448,11 +468,59 @@ const AdminStats: React.FC = () => {
                     </div>
                 </motion.div>
 
-                {/* Tech Info Panel */}
+                {/* Feedback Detailed Stats */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
+                    className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"
+                >
+                    <div className="glass-panel p-6 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md">
+                        <h4 className="text-sm font-bold text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <ThumbsUp size={16} className="text-success" /> User Satisfaction
+                        </h4>
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-end">
+                                <span className="text-textSec text-xs font-bold">POS RATINGS</span>
+                                <span className="text-success font-outfit font-bold text-xl">{feedbackStats?.total_positive || 0}</span>
+                            </div>
+                            <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                                <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: feedbackStats ? `${feedbackStats.positive_rate_percent}%` : 0 }}
+                                    className="h-full bg-success shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+                                />
+                            </div>
+                            <div className="flex justify-between items-end pt-2">
+                                <span className="text-textSec text-xs font-bold">NEG RATINGS</span>
+                                <span className="text-danger font-outfit font-bold text-xl">{feedbackStats?.total_negative || 0}</span>
+                            </div>
+                            <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                                <motion.div 
+                                    initial={{ width: 0 }}
+                                    animate={{ width: feedbackStats ? `${100 - feedbackStats.positive_rate_percent}%` : 0 }}
+                                    className="h-full bg-danger shadow-[0_0_10px_rgba(244,63,94,0.5)]"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="glass-panel p-6 rounded-2xl border border-white/10 bg-black/20 backdrop-blur-md flex flex-col justify-center">
+                        <div className="text-center space-y-2">
+                            <p className="text-textSec text-xs font-bold uppercase tracking-widest">Global Feedback Volume</p>
+                            <h2 className="text-5xl font-outfit font-bold text-white drop-shadow-glow">
+                                {feedbackStats ? (feedbackStats.total_positive + feedbackStats.total_negative) : 0}
+                            </h2>
+                            <p className="text-accentGlow text-[10px] font-bold">TOTAL INTERACTIONS RATED</p>
+                        </div>
+                    </div>
+                </motion.div>
+
+                {/* Tech Info Panel */}
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
                     className="glass-panel rounded-2xl border border-white/10 overflow-hidden shadow-2xl relative"
                 >
                     <div className="px-6 py-5 border-b border-white/10 bg-black/40 backdrop-blur-md flex items-center justify-between">

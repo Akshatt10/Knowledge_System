@@ -16,15 +16,19 @@ import {
     Video,
     VideoOff,
     Folder as FolderIcon,
-    ChevronDown
+    ChevronDown,
+    ThumbsUp,
+    ThumbsDown,
+    ShieldCheck,
+    AlertTriangle
 } from 'lucide-react';
-import VideoRoom from '../components/Video/VideoRoom';
 import ReactMarkdown from 'react-markdown';
 import { roomService, documentService, folderService } from '../services/api';
 import { useSearchParams } from 'react-router-dom';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
+import { useVideoCall } from '../context/VideoCallContext';
 
 
 
@@ -51,6 +55,7 @@ const Chat: React.FC = () => {
         provider, 
         setProvider, 
         sendQuery, 
+        giveFeedback,
         clearChat,
         selectedFolderId,
         setSelectedFolderId
@@ -65,11 +70,12 @@ const Chat: React.FC = () => {
     const [myDocuments, setMyDocuments] = useState<any[]>([]);
     const [roomDocuments, setRoomDocuments] = useState<any[]>([]);
     const [addingDoc, setAddingDoc] = useState<string | null>(null);
+    const [removingDoc, setRemovingDoc] = useState<string | null>(null);
 
     const [showRoomModal, setShowRoomModal] = useState(false);
     const [newRoomName, setNewRoomName] = useState('');
     const [activeRoomName, setActiveRoomName] = useState<string | null>(null);
-    const [showVideo, setShowVideo] = useState(false);
+    const { showVideo, startCall, endCall } = useVideoCall();
     const [creatingRoom, setCreatingRoom] = useState(false);
     
     const [folders, setFolders] = useState<any[]>([]);
@@ -183,7 +189,7 @@ const Chat: React.FC = () => {
         if (!roomId) return;
         setAddingDoc(docId);
         try {
-            const res = await roomService.addDocumentToRoom(roomId, docId);
+            const res = await roomService.addDocuments(roomId, [docId]);
             if (res.data.status === 'success' || res.data.status === 'already_added') {
                 setRoomDocuments(prev => {
                     if (prev.some(d => d.document_id === docId)) return prev;
@@ -195,6 +201,20 @@ const Chat: React.FC = () => {
             console.error("Failed to share document to room", err);
         } finally {
             setAddingDoc(null);
+        }
+    };
+
+    const handleRemoveDocument = async (docId: string) => {
+        if (!roomId) return;
+        setRemovingDoc(docId);
+        try {
+            await roomService.removeDocument(roomId, docId);
+            setRoomDocuments(prev => prev.filter(d => d.document_id !== docId));
+            fetchVaultData();
+        } catch (err) {
+            console.error("Failed to remove document from room", err);
+        } finally {
+            setRemovingDoc(null);
         }
     };
 
@@ -349,7 +369,7 @@ const Chat: React.FC = () => {
                                 <FileBox size={14} /> Shared Vault
                             </button>
                             <button
-                                onClick={() => setShowVideo(!showVideo)}
+                                onClick={() => showVideo ? endCall() : startCall(roomId!)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border transition-all duration-500 relative group overflow-hidden ${
                                     showVideo 
                                     ? 'bg-danger/20 text-danger border-danger/30 shadow-[0_0_20px_rgba(239,68,68,0.2)]' 
@@ -389,9 +409,10 @@ const Chat: React.FC = () => {
                 {/* Messages Container */}
                 <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8 lg:px-12 flex flex-col gap-6 custom-scrollbar relative z-0">
                     <AnimatePresence initial={false}>
-                        {displayMessages.map((msg, i) => {
+                        {displayMessages.map((msg: any, i) => {
                             const isUser = msg.role === 'user';
                             const isSystem = msg.role === 'system';
+                            const isAi = msg.role === 'ai' || msg.role === 'assistant';
                             const content = msg.content;
                             const isMe = msg.sender === user?.email.split('@')[0];
                             const senderName = isUser ? (isMe ? 'You' : msg.sender) : (isSystem ? 'System' : 'Intelligence Agent');
@@ -424,8 +445,8 @@ const Chat: React.FC = () => {
                                     )}
 
                                     <div className={`flex gap-3 md:gap-4 ${isRightSide ? 'flex-row-reverse' : 'flex-row'}`}>
-                                        <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center shadow-md ${!isUser ? 'bg-accentGlow/10 border border-accentGlow/30' : 'bg-white/5 border border-white/10'}`}>
-                                            {!isUser ? <Sparkles size={20} className="text-accentGlow drop-shadow-glow" /> : <UserIcon size={20} className="text-textMain/80" />}
+                                        <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center shadow-md ${isAi ? 'bg-accentGlow/10 border border-accentGlow/30' : 'bg-white/5 border border-white/10'}`}>
+                                            {isAi ? <Sparkles size={20} className="text-accentGlow drop-shadow-glow" /> : <UserIcon size={20} className="text-textMain/80" />}
                                         </div>
 
                                         <div className={`group relative p-5 rounded-2xl border ${isRightSide ? 'bg-accentSec/10 border-accentSec/30 rounded-tr-sm backdrop-blur-md' : 'bg-black/40 border-white/10 rounded-tl-sm backdrop-blur-md hover:border-white/20 transition-colors'}`}>
@@ -477,6 +498,48 @@ const Chat: React.FC = () => {
                                                         ))}
                                                     </div>
                                                 </details>
+                                            )}
+
+                                            {/* Confidence & Feedback Bar */}
+                                            {isAi && msg.query_id && (
+                                                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        {msg.confidence_score !== undefined && (
+                                                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.7rem] font-bold border transition-all ${
+                                                                msg.confidence_score >= 0.7 
+                                                                ? 'bg-success/5 border-success/20 text-success' 
+                                                                : msg.confidence_score >= 0.4 
+                                                                ? 'bg-warning/5 border-warning/20 text-warning' 
+                                                                : 'bg-danger/5 border-danger/20 text-danger'
+                                                            }`}>
+                                                                {msg.confidence_score >= 0.7 ? <ShieldCheck size={12} /> : <AlertTriangle size={12} />}
+                                                                Confidence: {Math.round(msg.confidence_score * 100)}%
+                                                            </div>
+                                                        )}
+                                                        <div className="flex items-center gap-1">
+                                                            <button 
+                                                                onClick={() => !isMultiplayer && giveFeedback(i, 1)}
+                                                                className={`p-1.5 rounded-lg transition-all ${msg.feedback === 1 ? 'bg-success/20 text-success shadow-glow' : 'text-textSec hover:text-success hover:bg-success/10'}`}
+                                                                disabled={isMultiplayer}
+                                                                title="Trustworthy"
+                                                            >
+                                                                <ThumbsUp size={14} className={msg.feedback === 1 ? 'fill-current' : ''} />
+                                                            </button>
+                                                            <button 
+                                                                onClick={() => !isMultiplayer && giveFeedback(i, -1)}
+                                                                className={`p-1.5 rounded-lg transition-all ${msg.feedback === -1 ? 'bg-danger/20 text-danger shadow-glow' : 'text-textSec hover:text-danger hover:bg-danger/10'}`}
+                                                                disabled={isMultiplayer}
+                                                                title="Inaccurate"
+                                                            >
+                                                                <ThumbsDown size={14} className={msg.feedback === -1 ? 'fill-current' : ''} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div className="text-[0.65rem] text-textSec/40 font-mono tracking-tighter">
+                                                        REF: {msg.query_id.split('-')[0]}
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -565,7 +628,7 @@ const Chat: React.FC = () => {
                                             <button
                                                 onClick={() => handleShareDocument(doc.document_id)}
                                                 disabled={addingDoc === doc.document_id || isAdded}
-                                                className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${isAdded || addingDoc === doc.document_id
+                                                className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-bold transition-all duration-300 ${isAdded || addingDoc === doc.document_id
                                                     ? 'bg-success/20 text-success border border-success/30 cursor-default shadow-[inset_0_0_10px_rgba(16,185,129,0.1)]'
                                                     : 'bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 hover:border-purple-500/40 cursor-pointer shadow-[inset_0_0_10px_rgba(168,85,247,0.05)]'
                                                     }`}
@@ -573,8 +636,18 @@ const Chat: React.FC = () => {
                                                 {(isAdded || addingDoc === doc.document_id) ? <CheckCircle2 size={16} /> : <PlusCircle size={16} />}
                                                 {addingDoc === doc.document_id ? 'Adding...' : (isAdded ? 'Shared in Room' : 'Add to Room Vault')}
                                             </button>
+                                            {isAdded && (
+                                                <button
+                                                    onClick={() => handleRemoveDocument(doc.document_id)}
+                                                    disabled={removingDoc === doc.document_id}
+                                                    className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-danger/10 text-danger border border-danger/20 hover:bg-danger/20 hover:border-danger/40 transition-all duration-300"
+                                                    title="Remove from Room"
+                                                >
+                                                    {removingDoc === doc.document_id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                                                </button>
+                                            )}
                                         </div>
-                                    )
+                                    );
                                 })
                             )}
                         </div>
@@ -641,14 +714,6 @@ const Chat: React.FC = () => {
                     </div>
                 )}
             </AnimatePresence>
-
-            {/* Video Overlay */}
-            {isMultiplayer && showVideo && roomId && (
-                <VideoRoom 
-                    roomName={roomId} 
-                    onClose={() => setShowVideo(false)} 
-                />
-            )}
         </div>
     );
 };

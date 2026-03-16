@@ -78,6 +78,7 @@ export const queryService = {
         callbacks: {
             onToken: (token: string) => void;
             onSources: (sources: any[]) => void;
+            onAnalytics: (data: any) => void;
             onDone: () => void;
             onError: (error: string) => void;
         }
@@ -123,6 +124,7 @@ export const queryService = {
                 buffer = lines.pop() || '';
 
                 for (const line of lines) {
+                    if (line.trim() === '') continue;
                     if (line.startsWith('data: ')) {
                         try {
                             const event = JSON.parse(line.slice(6));
@@ -130,6 +132,8 @@ export const queryService = {
                                 callbacks.onToken(event.content);
                             } else if (event.type === 'sources') {
                                 callbacks.onSources(event.sources || []);
+                            } else if (event.type === 'analytics') {
+                                callbacks.onAnalytics(event);
                             } else if (event.type === 'done') {
                                 callbacks.onDone();
                             }
@@ -143,6 +147,9 @@ export const queryService = {
             callbacks.onError(err.message || 'Stream connection failed');
         }
     },
+
+    giveFeedback: (queryId: string, feedback: number) => 
+        api.post(`/query/${queryId}/feedback`, { feedback }),
 };
 
 // Folder Services
@@ -164,6 +171,7 @@ export const adminService = {
         api.patch(`/admin/users/${id}`, data),
     deleteUser: (id: string) => api.delete(`/admin/users/${id}`),
     getTimeSeriesStats: (period: string) => api.get(`/admin/stats/time-series?period=${period}`),
+    getFeedbackStats: () => api.get('/admin/feedback/stats'),
 };
 
 // Room / Multiplayer Services
@@ -173,10 +181,10 @@ export const roomService = {
         api.post(`/rooms?${documentId ? `document_id=${documentId}&` : ''}name=${encodeURIComponent(name)}`),
     getHistory: (roomId: string) => api.get(`/rooms/${roomId}/history`),
     getUserRooms: () => api.get(`/user/rooms`),
-    addDocumentToRoom: (roomId: string, documentId: string) =>
-        api.post(`/rooms/${roomId}/documents?document_id=${documentId}`),
+    addDocuments: (roomId: string, documentIds: string[]) => api.post(`/rooms/${roomId}/documents`, { document_ids: documentIds }),
+    removeDocument: (roomId: string, documentId: string) => api.delete(`/rooms/${roomId}/documents/${documentId}`),
     getRoomDocuments: (roomId: string) => api.get(`/rooms/${roomId}/documents`),
-    leaveRoom: (roomId: string) => api.delete(`/rooms/${roomId}/leave`)
+    leaveRoom: (roomId: string) => api.delete(`/rooms/${roomId}/leave`),
 };
 
 export const connectorService = {
@@ -198,5 +206,14 @@ export const connectorService = {
     disconnect: (accountId: string) => api.delete(`/connectors/${accountId}`),
 };
 
+export const graphService = {
+    getGraphData: () => api.get('/graph/'),
+    recomputeGraph: () => api.post('/graph/recompute'),
+};
+
+export const homeService = {
+    getStats: () => api.get('/cli/status'),
+    getHistory: (limit: number = 5) => api.get(`/query/history?limit=${limit}`),
+};
 
 export default api;

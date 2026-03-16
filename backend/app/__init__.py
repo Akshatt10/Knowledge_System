@@ -55,6 +55,8 @@ def create_app() -> FastAPI:
     from app.routes.connectors import router as connectors_router
     from app.routes.video import router as video_router
     from app.routes.folders import router as folders_router
+    from app.routes.graph import router as graph_router
+    from app.routes.cli import router as cli_router
 
     app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
     app.include_router(documents_router, prefix="/api")
@@ -64,5 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(connectors_router, prefix="/api/connectors")
     app.include_router(video_router, prefix="/api", tags=["video"])
     app.include_router(folders_router, prefix="/api")
+    app.include_router(graph_router, prefix="/api/graph", tags=["graph"])
+    app.include_router(cli_router, prefix="/api")
 
     return app

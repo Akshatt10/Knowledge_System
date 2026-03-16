@@ -3,6 +3,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
     MessageSquare,
+    Home as HomeIcon,
     Upload,
     BarChart3,
     LogOut,
@@ -10,7 +11,8 @@ import {
     ShieldCheck,
     Sparkles,
     Hash,
-    Plug
+    Plug,
+    Network
 } from 'lucide-react';
 import { roomService } from '../services/api';
 
@@ -40,8 +42,10 @@ const Sidebar: React.FC = () => {
     };
 
     const navItems = [
+        { to: '/home', label: 'Dashboard', icon: <HomeIcon size={20} /> },
         { to: '/chat', label: 'Chat Hub', icon: <MessageSquare size={20} /> },
         { to: '/knowledge', label: 'Documents', icon: <Upload size={20} /> },
+        { to: '/graph', label: 'Knowledge Graph', icon: <Network size={20} /> },
         { to: '/connectors', label: 'Connectors', icon: <Plug size={20} /> },
     ];
 

@@ -4,13 +4,16 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
+import Home from './pages/Home';
 import Chat from './pages/Chat';
 import KnowledgeBase from './pages/KnowledgeBase';
+import KnowledgeGraph from './pages/KnowledgeGraph';
 import Connectors from './pages/Connectors';
 import AdminStats from './pages/AdminStats';
 import UserManagement from './pages/UserManagement';
 import { WebSocketProvider } from './context/WebSocketContext';
 import { ChatProvider } from './context/ChatContext';
+import { VideoCallProvider } from './context/VideoCallContext';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -28,12 +31,21 @@ const App: React.FC = () => {
     <AuthProvider>
       <WebSocketProvider>
         <ChatProvider>
+          <VideoCallProvider>
           <BrowserRouter>
             <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
 
             {/* Protected Application Routes */}
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute>
+                  <MainLayout><Home /></MainLayout>
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/chat"
               element={
@@ -59,6 +71,14 @@ const App: React.FC = () => {
               }
             />
             <Route
+              path="/graph"
+              element={
+                <ProtectedRoute>
+                  <MainLayout><KnowledgeGraph /></MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/admin/users"
               element={
                 <ProtectedRoute adminOnly>
@@ -76,10 +96,11 @@ const App: React.FC = () => {
             />
 
             {/* Default Redirects */}
-            <Route path="/" element={<Navigate to="/chat" replace />} />
-            <Route path="*" element={<Navigate to="/chat" replace />} />
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="*" element={<Navigate to="/home" replace />} />
           </Routes>
           </BrowserRouter>
+          </VideoCallProvider>
         </ChatProvider>
       </WebSocketProvider>
     </AuthProvider>

@@ -1,25 +1,48 @@
-"""Admin & health-check routes."""
-
 from __future__ import annotations
 
 import logging
 from typing import List
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.services.auth import require_admin, get_db
-from app.models.database import User, Document
+from app.models.database import User, Document, QueryFeedback, QueryLog
 from app.models.schemas import (
     HealthResponse, 
     StatsResponse, 
     UserOut, 
     UserUpdate,
-    TimeSeriesResponse
+    TimeSeriesResponse,
+    FeedbackStatsResponse
 )
 from app.services.vectorstore import vector_store
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Admin"])
+
+
+@router.get("/admin/feedback/stats", response_model=FeedbackStatsResponse)
+async def get_feedback_stats(
+    current_user: User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Return aggregated feedback statistics for all AI queries."""
+    total_pos = db.query(QueryFeedback).filter(QueryFeedback.feedback == 1).count()
+    total_neg = db.query(QueryFeedback).filter(QueryFeedback.feedback == -1).count()
+    
+    total = total_pos + total_neg
+    rate = (total_pos / total * 100) if total > 0 else 0.0
+    
+    # Optional: Breakdown by folder (requires joining with QueryLog and Document)
+    # For now, we'll return a simple breakdown if requested, but this serves the core requirement
+    
+    return FeedbackStatsResponse(
+        total_positive=total_pos,
+        total_negative=total_neg,
+        positive_rate_percent=round(rate, 2),
+        breakdown_by_folder=[]
+    )
 
 
 @router.get("/health", response_model=HealthResponse)

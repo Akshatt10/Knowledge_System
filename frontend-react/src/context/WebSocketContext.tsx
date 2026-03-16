@@ -14,6 +14,10 @@ interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
     sender?: string;
+    sources?: any[];
+    query_id?: string;
+    confidence_score?: number;
+    feedback?: number;
 }
 
 interface WebSocketContextType {
@@ -94,7 +98,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     setError("Connection lost. Maximum reconnect attempts reached.");
                 }
             } else {
-                console.log("WebSocket Disconnected intentionally");
+                // WebSocket disconnected intentionally
             }
         };
 

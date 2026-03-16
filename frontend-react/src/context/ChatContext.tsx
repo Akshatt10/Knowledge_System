@@ -6,6 +6,9 @@ interface Message {
     content: string;
     sources?: any[];
     id?: string;
+    query_id?: string;
+    confidence_score?: number;
+    feedback?: number; // 1, -1, or undefined
     sender?: string;
 }
 
@@ -19,6 +22,7 @@ interface ChatContextType {
     setProvider: (provider: string) => void;
     setSelectedFolderId: (id: string | null) => void;
     sendQuery: (question: string) => Promise<void>;
+    giveFeedback: (messageIndex: number, feedback: number) => Promise<void>;
     clearChat: () => void;
 }
 
@@ -63,6 +67,22 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         sessionStorage.removeItem('chat_messages');
         sessionStorage.removeItem('chat_history');
     }, []);
+
+    const giveFeedback = useCallback(async (index: number, feedbackValue: number) => {
+        const msg = localMessages[index];
+        if (!msg || !msg.query_id) return;
+
+        try {
+            await queryService.giveFeedback(msg.query_id, feedbackValue);
+            setLocalMessages(prev => {
+                const updated = [...prev];
+                updated[index] = { ...updated[index], feedback: feedbackValue };
+                return updated;
+            });
+        } catch (err) {
+            console.error("Failed to give feedback", err);
+        }
+    }, [localMessages]);
 
     const sendQuery = useCallback(async (question: string) => {
         // Show user message + loading spinner
@@ -109,6 +129,20 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                                 updated[updated.length - 1] = {
                                     ...lastAi,
                                     sources,
+                                };
+                            }
+                            return updated;
+                        });
+                    },
+                    onAnalytics: (data: any) => {
+                        setLocalMessages(prev => {
+                            const updated = [...prev];
+                            const lastAi = updated[updated.length - 1];
+                            if (lastAi && lastAi.role === 'ai') {
+                                updated[updated.length - 1] = {
+                                    ...lastAi,
+                                    query_id: data.query_id,
+                                    confidence_score: data.confidence_score
                                 };
                             }
                             return updated;
@@ -162,6 +196,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setProvider,
             setSelectedFolderId,
             sendQuery, 
+            giveFeedback,
             clearChat 
         }}>
             {children}
