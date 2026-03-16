@@ -14,12 +14,32 @@ import UserManagement from './pages/UserManagement';
 import { WebSocketProvider } from './context/WebSocketContext';
 import { ChatProvider } from './context/ChatContext';
 import { VideoCallProvider } from './context/VideoCallContext';
+import { Menu } from 'lucide-react';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+
   return (
-    <div className="flex h-screen w-screen bg-app-radial">
-      <Sidebar />
-      <main className="flex-1 flex overflow-hidden">
+    <div className="flex h-screen w-screen bg-app-radial overflow-hidden">
+      <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
+      
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center justify-between p-4 bg-black/20 backdrop-blur-md border-b border-white/5 z-20">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-accent-gradient flex items-center justify-center shadow-glow">
+              <span className="text-white font-bold text-xs">N</span>
+            </div>
+            <span className="text-xl font-outfit font-bold text-white tracking-wide">Nexus</span>
+          </div>
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 text-textSec hover:text-white"
+          >
+            <Menu size={24} />
+          </button>
+        </div>
+
         {children}
       </main>
     </div>

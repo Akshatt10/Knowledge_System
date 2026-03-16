@@ -143,7 +143,7 @@ const Home: React.FC = () => {
                             <Activity size={12} className="text-accentGlow animate-pulse" />
                             <span className="text-[10px] font-bold text-accentGlow uppercase tracking-[0.3em] font-outfit">{getGreeting()}</span>
                         </div>
-                        <h1 className="text-5xl font-outfit font-bold text-white tracking-tight leading-tight">
+                        <h1 className="text-3xl md:text-5xl font-outfit font-bold text-white tracking-tight leading-tight">
                             Your <span className="text-transparent bg-clip-text bg-accent-gradient">Dashboard</span>
                         </h1>
                         <p className="text-textSec mt-3 text-lg font-medium">

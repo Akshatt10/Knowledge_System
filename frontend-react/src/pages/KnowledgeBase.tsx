@@ -184,16 +184,16 @@ const KnowledgeBase: React.FC = () => {
     };
 
     return (
-        <div className="flex-1 p-8 lg:p-12 overflow-y-auto relative z-10 w-full h-full">
+        <div className="flex-1 p-4 md:p-8 lg:p-12 overflow-y-auto relative z-10 w-full h-full">
             <div className="max-w-[1400px] mx-auto">
-                <div className="flex justify-between items-center mb-10 mt-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 mt-4 gap-6">
                     <div>
                         <h1 className="text-3xl lg:text-4xl font-outfit font-bold text-textMain mb-2 tracking-tight">Knowledge Base</h1>
                         <p className="text-textSec text-[0.95rem]">Securely ingest, manage, and collaborate on your organizational intelligence.</p>
                     </div>
                     <button
                         onClick={loadData}
-                        className="glass-panel px-5 py-2.5 flex items-center gap-2 hover:bg-white/10 transition-colors duration-300 text-sm font-medium border-white/20 hover:border-white/30"
+                        className="glass-panel px-5 py-2.5 flex items-center gap-2 hover:bg-white/10 transition-colors duration-300 text-sm font-medium border-white/20 hover:border-white/30 w-full sm:w-auto justify-center"
                     >
                         {loading ? <Loader2 size={16} className="animate-spin text-accentGlow" /> : <RefreshCw size={16} className="text-accentGlow" />}
                         Refresh Library
@@ -218,13 +218,13 @@ const KnowledgeBase: React.FC = () => {
                                     e.preventDefault();
                                     if (e.dataTransfer.files.length > 0) handleFileUploads(e.dataTransfer.files);
                                 }}
-                                className="border-[3px] border-dashed border-white/20 rounded-[20px] p-16 text-center cursor-pointer transition-all duration-300 hover:border-accentGlow/50 hover:bg-accentGlow/5 flex flex-col items-center justify-center min-h-[340px]"
+                                className="border-[3px] border-dashed border-white/20 rounded-[20px] p-8 md:p-16 text-center cursor-pointer transition-all duration-300 hover:border-accentGlow/50 hover:bg-accentGlow/5 flex flex-col items-center justify-center min-h-[280px] md:min-h-[340px]"
                             >
-                                <div className="w-20 h-20 rounded-full bg-white/5 flex items-center justify-center mb-6 shadow-inner ring-4 ring-white/5">
-                                    <CloudUpload size={36} className="text-textSec" />
+                                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/5 flex items-center justify-center mb-6 shadow-inner ring-4 ring-white/5">
+                                    <CloudUpload size={32} className="text-textSec" />
                                 </div>
-                                <h4 className="text-lg font-semibold text-textMain mb-2">Drag & Drop Files Here</h4>
-                                <p className="text-textSec text-sm">Or click to browse from your computer</p>
+                                <h4 className="text-lg font-semibold text-textMain mb-2">Drag & Drop Files</h4>
+                                <p className="text-textSec text-sm">Or tap to browse</p>
                                 <div className="mt-8 flex gap-2 justify-center flex-wrap">
                                     {['PDF', 'TXT', 'DOCX', 'JSON'].map(ext => (
                                         <span key={ext} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md text-[0.7rem] uppercase tracking-widest font-semibold text-textMain/50">
@@ -238,25 +238,22 @@ const KnowledgeBase: React.FC = () => {
                                 />
                             </div>
                         ) : (
-                            <div className="p-12 text-center flex flex-col items-center justify-center min-h-[340px] border border-white/5 rounded-2xl bg-black/20 relative overflow-hidden">
+                            <div className="p-8 md:p-12 text-center flex flex-col items-center justify-center min-h-[280px] md:min-h-[340px] border border-white/5 rounded-2xl bg-black/20 relative overflow-hidden">
                                 <div className="absolute inset-0 bg-accent-gradient opacity-5 animate-pulse"></div>
-                                <Loader2 size={56} className="animate-spin text-accentGlow mb-6 drop-shadow-glow relative z-10" />
+                                <Loader2 size={48} className="animate-spin text-accentGlow mb-6 drop-shadow-glow relative z-10" />
                                 <h4 className="text-lg font-semibold text-textMain mb-2 relative z-10">
                                     Ingesting File {batchCurrent} of {batchTotal}
                                 </h4>
-                                <p className="text-textSec text-sm mb-8 truncate w-full max-w-[300px] relative z-10">
+                                <p className="text-textSec text-xs md:text-sm mb-8 truncate w-full max-w-[260px] relative z-10">
                                     {currentFileName}
                                 </p>
-                                <div className="w-full max-w-[300px] h-2.5 bg-white/10 rounded-full overflow-hidden shadow-inner relative z-10">
+                                <div className="w-full max-w-[260px] h-2 bg-white/10 rounded-full overflow-hidden shadow-inner relative z-10">
                                     <motion.div
                                         initial={{ width: 0 }}
                                         animate={{ width: `${uploadProgress}%` }}
                                         className="h-full bg-accent-gradient shadow-[0_0_10px_rgba(0,240,255,0.8)]"
                                     />
                                 </div>
-                                <p className="mt-6 text-accentGlow/80 text-xs font-semibold uppercase tracking-widest animate-pulse relative z-10">
-                                    Building Semantic Embeddings...
-                                </p>
                             </div>
                         )}
 
@@ -272,7 +269,7 @@ const KnowledgeBase: React.FC = () => {
                     </div>
 
                     {/* Document Library Section */}
-                    <div className="glass-panel p-8 flex flex-col h-fit lg:h-full lg:max-h-[calc(100vh-160px)] relative overflow-hidden">
+                    <div className="glass-panel p-6 md:p-8 flex flex-col h-fit lg:h-full lg:max-h-[calc(100vh-160px)] relative overflow-hidden">
                         <div className="absolute bottom-0 left-0 w-64 h-64 bg-accentSec/5 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
 
                         <h3 className="text-xl font-outfit font-semibold text-textMain mb-6 flex items-center justify-between shrink-0">

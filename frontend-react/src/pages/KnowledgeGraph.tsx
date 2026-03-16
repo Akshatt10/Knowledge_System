@@ -130,13 +130,13 @@ const KnowledgeGraph: React.FC = () => {
     return (
         <div className="h-screen w-full bg-[#0B0F1A] overflow-hidden relative">
             {/* Header */}
-            <div className="absolute top-6 left-6 z-10 flex flex-col gap-4">
-                <div className="bg-[#161B22]/90 backdrop-blur-md p-5 rounded-2xl border border-slate-700 shadow-2xl">
-                    <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2">
-                        Knowledge Vault
-                        <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">AI Powered</span>
+            <div className="absolute top-4 left-4 md:top-6 md:left-6 z-10 flex flex-col gap-3 md:gap-4 max-w-[calc(100%-2rem)] md:max-w-md">
+                <div className="bg-[#161B22]/90 backdrop-blur-md p-4 md:p-5 rounded-2xl border border-slate-700 shadow-2xl">
+                    <h1 className="text-xl md:text-2xl font-bold text-white mb-1 flex items-center gap-2">
+                        Intelligence Map
+                        <span className="hidden sm:inline-flex text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">AI Powered</span>
                     </h1>
-                    <p className="text-slate-400 text-sm max-w-xs leading-relaxed">
+                    <p className="text-slate-400 text-xs md:text-sm leading-relaxed hidden sm:block">
                         Visualize relationships across your concepts and documents.
                     </p>
                 </div>
@@ -146,53 +146,50 @@ const KnowledgeGraph: React.FC = () => {
                         onClick={handleRecompute}
                         disabled={isRecomputing}
                         title="Recompute AI Relationships"
-                        className={`p-2.5 rounded-xl border transition-all shadow-lg flex items-center gap-2 ${
+                        className={`p-2 md:p-2.5 rounded-xl border transition-all shadow-lg flex items-center gap-2 ${
                             isRecomputing 
                                 ? 'bg-amber-500/20 border-amber-500/50 text-amber-500 cursor-not-allowed' 
                                 : 'bg-[#161B22]/90 hover:bg-slate-700 border-slate-700 text-white hover:scale-105 active:scale-95'
                         }`}
                     >
-                        <Zap size={22} className={isRecomputing ? 'animate-pulse' : ''} />
-                        {isRecomputing && <span className="text-xs font-bold animate-pulse">Analyzing...</span>}
+                        <Zap size={20} className={isRecomputing ? 'animate-pulse' : ''} />
+                        {isRecomputing && <span className="text-[10px] font-bold animate-pulse">Syncing...</span>}
                     </button>
                     
                     <button 
                         onClick={() => fgRef.current.zoom(fgRef.current.zoom() * 1.5, 400)}
-                        title="Zoom In"
-                        className="p-2.5 bg-[#161B22]/90 hover:bg-slate-700 rounded-xl border border-slate-700 text-white transition-all hover:scale-105 active:scale-95 shadow-lg"
+                        className="p-2 md:p-2.5 bg-[#161B22]/90 hover:bg-slate-700 rounded-xl border border-slate-700 text-white transition-all shadow-lg"
                     >
-                        <ZoomIn size={22} />
+                        <ZoomIn size={20} />
                     </button>
                     <button 
                         onClick={() => fgRef.current.zoom(fgRef.current.zoom() / 1.5, 400)}
-                        title="Zoom Out"
-                        className="p-2.5 bg-[#161B22]/90 hover:bg-slate-700 rounded-xl border border-slate-700 text-white transition-all hover:scale-105 active:scale-95 shadow-lg"
+                        className="p-2 md:p-2.5 bg-[#161B22]/90 hover:bg-slate-700 rounded-xl border border-slate-700 text-white transition-all shadow-lg"
                     >
-                        <ZoomOut size={22} />
+                        <ZoomOut size={20} />
                     </button>
                     <button 
                         onClick={() => fgRef.current.zoomToFit(800, 100)}
-                        title="Fit View"
-                        className="p-2.5 bg-[#161B22]/90 hover:bg-slate-700 rounded-xl border border-slate-700 text-white transition-all hover:scale-105 active:scale-95 shadow-lg"
+                        className="p-2 md:p-2.5 bg-[#161B22]/90 hover:bg-slate-700 rounded-xl border border-slate-700 text-white transition-all shadow-lg"
                     >
-                        <Maximize2 size={22} />
+                        <Maximize2 size={20} />
                     </button>
                 </div>
             </div>
 
             {/* Legend */}
-            <div className="absolute bottom-6 right-6 z-10 bg-[#161B22]/90 backdrop-blur-md p-4 rounded-xl border border-slate-700 flex flex-col gap-3 text-xs shadow-2xl">
-                <div className="text-[0.6rem] uppercase tracking-tighter text-slate-500 font-bold mb-1">Entity Types</div>
-                <div className="flex items-center gap-3">
-                    <div className="w-3.5 h-3.5 rounded-full bg-[#3B82F6] shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
+            <div className="absolute bottom-4 right-4 md:bottom-6 md:right-6 z-10 bg-[#161B22]/90 backdrop-blur-md p-3 md:p-4 rounded-xl border border-slate-700 flex flex-col gap-2 md:gap-3 text-[10px] md:text-xs shadow-2xl">
+                <div className="text-[0.6rem] uppercase tracking-tighter text-slate-500 font-bold mb-1 hidden md:block">Entity Types</div>
+                <div className="flex items-center gap-2 md:gap-3">
+                    <div className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-full bg-[#3B82F6] shadow-[0_0_10px_rgba(59,130,246,0.6)]"></div>
                     <span className="text-slate-300 font-medium">Folder</span>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="w-3.5 h-3.5 rounded-full bg-[#10B981] shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
-                    <span className="text-slate-300 font-medium">Document</span>
+                <div className="flex items-center gap-2 md:gap-3">
+                    <div className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-full bg-[#10B981] shadow-[0_0_10px_rgba(16,185,129,0.6)]"></div>
+                    <span className="text-slate-300 font-medium">File</span>
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="w-3.5 h-3.5 rounded-full bg-[#F59E0B] shadow-[0_0_10px_rgba(245,158,11,0.6)]"></div>
+                <div className="flex items-center gap-2 md:gap-3">
+                    <div className="w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-full bg-[#F59E0B] shadow-[0_0_10px_rgba(245,158,11,0.6)]"></div>
                     <span className="text-slate-300 font-medium">Concept</span>
                 </div>
             </div>

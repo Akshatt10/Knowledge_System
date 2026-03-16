@@ -12,11 +12,18 @@ import {
     Sparkles,
     Hash,
     Plug,
-    Network
+    Network,
+    X
 } from 'lucide-react';
 import { roomService } from '../services/api';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+    isOpen: boolean;
+    onClose: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const { user, logout, isAdmin, token } = useAuth();
     const navigate = useNavigate();
     const [rooms, setRooms] = React.useState<any[]>([]);
@@ -54,21 +61,30 @@ const Sidebar: React.FC = () => {
         { to: '/admin', label: 'System Stats', icon: <BarChart3 size={20} /> },
     ];
 
-    return (
-        <aside className="glass-panel w-[280px] h-[calc(100vh-40px)] m-5 p-6 flex flex-col relative overflow-hidden group">
+    const sidebarContent = (
+        <aside className="glass-panel w-[280px] h-full p-6 flex flex-col relative overflow-hidden">
             {/* Subtle glow effect behind the sidebar */}
             <div className="absolute top-0 left-0 w-full h-32 bg-accentGlow/5 blur-[50px] -z-10 rounded-t-2xl pointer-events-none"></div>
 
-            <div className="flex items-center gap-3 mb-10 pl-2">
-                <Sparkles size={28} className="text-accentGlow drop-shadow-glow" />
-                <h2 className="text-2xl font-outfit font-bold tracking-wide text-textMain">Nexus</h2>
+            <div className="flex items-center justify-between mb-10 pl-2">
+                <div className="flex items-center gap-3">
+                    <Sparkles size={28} className="text-accentGlow drop-shadow-glow" />
+                    <h2 className="text-2xl font-outfit font-bold tracking-wide text-textMain">Nexus</h2>
+                </div>
+                <button 
+                    onClick={onClose}
+                    className="md:hidden p-2 text-textSec hover:text-white"
+                >
+                    <X size={20} />
+                </button>
             </div>
 
-            <nav className="flex-1 flex flex-col gap-2 overflow-y-auto pr-2">
+            <nav className="flex-1 flex flex-col gap-2 overflow-y-auto pr-2 custom-scrollbar">
                 {navItems.map(item => (
                     <NavLink
                         key={item.to}
                         to={item.to}
+                        onClick={() => { if (window.innerWidth < 768) onClose(); }}
                         className={({ isActive }) =>
                             `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 relative overflow-hidden ${isActive
                                 ? 'text-accentGlow bg-accentGlow/10 shadow-[inset_0_0_20px_rgba(0,240,255,0.05)]'
@@ -82,7 +98,7 @@ const Sidebar: React.FC = () => {
                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-accentGlow rounded-r-md shadow-glow"></div>
                                 )}
                                 {item.icon}
-                                <span>{item.label}</span>
+                                <span className="font-outfit">{item.label}</span>
                             </>
                         )}
                     </NavLink>
@@ -99,6 +115,7 @@ const Sidebar: React.FC = () => {
                                 <NavLink
                                     key={room.id}
                                     to={`/chat?room=${room.id}`}
+                                    onClick={() => { if (window.innerWidth < 768) onClose(); }}
                                     className={({ isActive }) =>
                                         `flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 relative ${isActive
                                             ? 'text-accentGlow bg-accentGlow/5'
@@ -130,6 +147,7 @@ const Sidebar: React.FC = () => {
                             <NavLink
                                 key={item.to}
                                 to={item.to}
+                                onClick={() => { if (window.innerWidth < 768) onClose(); }}
                                 className={({ isActive }) =>
                                     `flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-300 relative ${isActive
                                         ? 'text-danger bg-danger/10 shadow-[inset_0_0_20px_rgba(255,77,77,0.05)]'
@@ -176,6 +194,42 @@ const Sidebar: React.FC = () => {
                 </button>
             </div>
         </aside>
+    );
+
+    return (
+        <>
+            {/* Desktop Sidebar */}
+            <div className="hidden md:flex h-[calc(100vh-40px)] m-5">
+                {sidebarContent}
+            </div>
+
+            {/* Mobile Drawer */}
+            <AnimatePresence>
+                {isOpen && (
+                    <div className="fixed inset-0 z-[100] md:hidden">
+                        {/* Overlay */}
+                        <motion.div 
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={onClose}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                        />
+                        
+                        {/* Content */}
+                        <motion.div 
+                            initial={{ x: '-100%' }}
+                            animate={{ x: 0 }}
+                            exit={{ x: '-100%' }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                            className="absolute left-0 top-0 bottom-0 shadow-2xl"
+                        >
+                            {sidebarContent}
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </>
     );
 };
 

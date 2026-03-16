@@ -156,22 +156,22 @@ const AdminStats: React.FC = () => {
     };
 
     return (
-        <div className="flex-1 p-6 md:p-10 overflow-y-auto custom-scrollbar relative">
+        <div className="flex-1 p-4 md:p-10 overflow-y-auto custom-scrollbar relative">
             <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-accentSec/5 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
 
             <div className="max-w-7xl mx-auto space-y-8">
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
                     <div>
-                        <h1 className="text-3xl font-outfit font-bold text-white flex items-center gap-3">
+                        <h1 className="text-2xl md:text-3xl font-outfit font-bold text-white flex items-center gap-3">
                             <Server className="text-accentGlow" /> System Overview
                         </h1>
-                        <p className="text-textSec mt-1 text-sm md:text-base">Monitor the real-time health and metrics of the Nexus Intelligence infrastructure.</p>
+                        <p className="text-textSec mt-1 text-xs md:text-sm">Monitor real-time health and metrics of the infrastructure.</p>
                     </div>
                     <button
                         onClick={loadData}
                         disabled={loading}
-                        className="glass-panel flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_20px_rgba(0,0,0,0.2)]"
+                        className="glass-panel flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white font-semibold text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg w-full sm:w-auto justify-center"
                     >
                         {loading ? <Loader2 size={18} className="animate-spin text-accentGlow" /> : <RefreshCw size={18} className="text-accentGlow" />}
                         {loading ? 'Syncing...' : 'Sync Metrics'}
@@ -190,21 +190,20 @@ const AdminStats: React.FC = () => {
                         }`}
                 >
                     <div className="flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${health === 'healthy' ? 'bg-success/20' : health === 'error' ? 'bg-danger/20' : 'bg-white/10'}`}>
+                        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 ${health === 'healthy' ? 'bg-success/20' : health === 'error' ? 'bg-danger/20' : 'bg-white/10'}`}>
                             {health === 'checking' ? (
-                                <Loader2 size={24} className="text-white animate-spin" />
+                                <Loader2 className="w-5 h-5 md:w-6 md:h-6 text-white animate-spin" />
                             ) : (
-                                <Activity size={24} className={health === 'healthy' ? 'text-success drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'text-danger drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]'} />
+                                <Activity className={`w-5 h-5 md:w-6 md:h-6 ${health === 'healthy' ? 'text-success drop-shadow-[0_0_8px_rgba(16,185,129,0.8)]' : 'text-danger drop-shadow-[0_0_8px_rgba(244,63,94,0.8)]'}`} />
                             )}
                         </div>
                         <div>
-                            <h3 className="text-white font-bold text-lg leading-tight flex items-center gap-2">
+                            <h3 className="text-white font-bold text-base md:text-lg leading-tight flex items-center gap-2">
                                 Engine Connectivity
-                                {health === 'healthy' && <span className="text-[10px] uppercase tracking-wider font-bold bg-success/20 text-success px-2 py-0.5 rounded-full border border-success/30">Online</span>}
-                                {health === 'error' && <span className="text-[10px] uppercase tracking-wider font-bold bg-danger/20 text-danger px-2 py-0.5 rounded-full border border-danger/30">Offline</span>}
+                                {health === 'healthy' && <span className="text-[8px] md:text-[10px] uppercase tracking-wider font-bold bg-success/20 text-success px-2 py-0.5 rounded-full border border-success/30">Online</span>}
                             </h3>
-                            <p className="text-textSec text-sm mt-0.5">
-                                {health === 'healthy' ? 'All systems operational and responding to queries.' : health === 'error' ? 'Critical services unreachable. Check connectivity.' : 'Verifying system status...'}
+                            <p className="text-textSec text-[11px] md:text-sm mt-0.5">
+                                {health === 'healthy' ? 'Systems operational and responding.' : health === 'error' ? 'Critical services unreachable.' : 'Verifying status...'}
                             </p>
                         </div>
                     </div>
@@ -244,7 +243,7 @@ const AdminStats: React.FC = () => {
                     transition={{ delay: 0.3 }}
                     className="glass-panel rounded-2xl border border-white/10 overflow-hidden shadow-2xl relative"
                 >
-                    <div className="px-6 py-5 border-b border-white/10 bg-black/40 backdrop-blur-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="px-6 py-5 border-b border-white/10 bg-black/40 backdrop-blur-md flex flex-col xl:flex-row xl:items-center justify-between gap-6">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
                                 <LineChart size={20} className="text-purple-400" />
@@ -256,13 +255,13 @@ const AdminStats: React.FC = () => {
                         </div>
 
                         {/* Period Toggle */}
-                        <div className="flex items-center bg-black/50 border border-white/10 p-1 rounded-xl">
+                        <div className="flex items-center bg-black/50 border border-white/10 p-1 rounded-xl overflow-x-auto no-scrollbar">
                             {(['1d', '7d', '30d', '6m', '12m'] as Period[]).map(p => (
                                 <button
                                     key={p}
                                     onClick={() => setPeriod(p)}
-                                    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all ${period === p
-                                            ? 'bg-accentGlow text-darkBg shadow-[0_0_10px_rgba(0,240,255,0.4)]'
+                                    className={`px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-bold rounded-lg transition-all whitespace-nowrap ${period === p
+                                            ? 'bg-accentGlow text-darkBg shadow-glow'
                                             : 'text-textSec hover:text-white hover:bg-white/5'
                                         }`}
                                 >
