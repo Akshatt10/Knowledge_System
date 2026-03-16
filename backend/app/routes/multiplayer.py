@@ -160,9 +160,41 @@ def leave_room(
         # If they aren't a member (already left), just succeed silently instead of crashing UI
         return {"status": "success", "message": "Already not a member."}
         
+    # Before removing the member, find all documents they own that are bound to this room
+    # and remove the association so other members can no longer query them.
+    user_docs_in_room = db.query(RoomDocument).join(Document).filter(
+        RoomDocument.room_id == room_id,
+        Document.user_id == str(current_user.id)
+    ).all()
+    
+    for rd in user_docs_in_room:
+        db.delete(rd)
+        
     db.delete(member)
     db.commit()
     return {"status": "success"}
+
+@router.delete("/rooms/{room_id}/documents/{document_id}")
+def remove_document_from_room(
+    room_id: str,
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Remove a document from a multiplayer room without deleting it globally."""
+    # Ensure they are a member
+    member = db.query(RoomMember).filter(RoomMember.room_id == room_id, RoomMember.user_id == current_user.id).first()
+    if not member:
+        raise HTTPException(status_code=403, detail="Not a member of this room")
+        
+    # Ensure the document belongs to the user or is in the room
+    rd = db.query(RoomDocument).filter(RoomDocument.room_id == room_id, RoomDocument.document_id == document_id).first()
+    if not rd:
+        raise HTTPException(status_code=404, detail="Document not found in this room")
+        
+    db.delete(rd)
+    db.commit()
+    return {"status": "success", "message": "Document removed from room"}
 
 @router.get("/rooms/{room_id}/history")
 def get_room_history(

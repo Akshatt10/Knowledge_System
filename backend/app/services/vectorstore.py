@@ -81,7 +81,7 @@ class VectorStoreService:
             
         try:
             # We interact with the pinecone index natively for metadata deletions
-            index = self.vectorstore.get_pinecone_index(settings.PINECONE_INDEX_NAME)
+            index = self._get_index()
             index.delete(filter=filter_query)
             logger.info("Deleted chunks for document %s", doc_id)
             return True

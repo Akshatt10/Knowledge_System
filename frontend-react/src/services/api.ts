@@ -173,10 +173,10 @@ export const roomService = {
         api.post(`/rooms?${documentId ? `document_id=${documentId}&` : ''}name=${encodeURIComponent(name)}`),
     getHistory: (roomId: string) => api.get(`/rooms/${roomId}/history`),
     getUserRooms: () => api.get(`/user/rooms`),
-    addDocumentToRoom: (roomId: string, documentId: string) =>
-        api.post(`/rooms/${roomId}/documents?document_id=${documentId}`),
+    addDocuments: (roomId: string, documentIds: string[]) => api.post(`/rooms/${roomId}/documents`, { document_ids: documentIds }),
+    removeDocument: (roomId: string, documentId: string) => api.delete(`/rooms/${roomId}/documents/${documentId}`),
     getRoomDocuments: (roomId: string) => api.get(`/rooms/${roomId}/documents`),
-    leaveRoom: (roomId: string) => api.delete(`/rooms/${roomId}/leave`)
+    leaveRoom: (roomId: string) => api.delete(`/rooms/${roomId}/leave`),
 };
 
 export const connectorService = {

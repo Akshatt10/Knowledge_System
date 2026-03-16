@@ -11,6 +11,7 @@ import AdminStats from './pages/AdminStats';
 import UserManagement from './pages/UserManagement';
 import { WebSocketProvider } from './context/WebSocketContext';
 import { ChatProvider } from './context/ChatContext';
+import { VideoCallProvider } from './context/VideoCallContext';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
@@ -28,6 +29,7 @@ const App: React.FC = () => {
     <AuthProvider>
       <WebSocketProvider>
         <ChatProvider>
+          <VideoCallProvider>
           <BrowserRouter>
             <Routes>
             {/* Public Routes */}
@@ -80,6 +82,7 @@ const App: React.FC = () => {
             <Route path="*" element={<Navigate to="/chat" replace />} />
           </Routes>
           </BrowserRouter>
+          </VideoCallProvider>
         </ChatProvider>
       </WebSocketProvider>
     </AuthProvider>

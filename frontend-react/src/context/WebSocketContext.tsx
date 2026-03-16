@@ -94,7 +94,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                     setError("Connection lost. Maximum reconnect attempts reached.");
                 }
             } else {
-                console.log("WebSocket Disconnected intentionally");
+                // WebSocket disconnected intentionally
             }
         };
 
