@@ -184,7 +184,7 @@ const Chat: React.FC = () => {
         if (!roomId) return;
         setAddingDoc(docId);
         try {
-            const res = await roomService.addDocumentToRoom(roomId, docId);
+            const res = await roomService.addDocuments(roomId, [docId]);
             if (res.data.status === 'success' || res.data.status === 'already_added') {
                 setRoomDocuments(prev => {
                     if (prev.some(d => d.document_id === docId)) return prev;
@@ -598,9 +598,8 @@ const Chat: React.FC = () => {
                                                     {removingDoc === doc.document_id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                                                 </button>
                                             )}
-                                            </div>
                                         </div>
-                                    )
+                                    );
                                 })
                             )}
                         </div>

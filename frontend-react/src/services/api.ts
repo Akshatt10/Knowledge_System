@@ -198,5 +198,8 @@ export const connectorService = {
     disconnect: (accountId: string) => api.delete(`/connectors/${accountId}`),
 };
 
+export const graphService = {
+    getGraphData: () => api.get('/graph/'),
+};
 
 export default api;

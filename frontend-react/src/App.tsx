@@ -6,6 +6,7 @@ import Sidebar from './components/Sidebar';
 import Login from './pages/Login';
 import Chat from './pages/Chat';
 import KnowledgeBase from './pages/KnowledgeBase';
+import KnowledgeGraph from './pages/KnowledgeGraph';
 import Connectors from './pages/Connectors';
 import AdminStats from './pages/AdminStats';
 import UserManagement from './pages/UserManagement';
@@ -57,6 +58,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <MainLayout><Connectors /></MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/graph"
+              element={
+                <ProtectedRoute>
+                  <MainLayout><KnowledgeGraph /></MainLayout>
                 </ProtectedRoute>
               }
             />

@@ -178,3 +178,26 @@ class TimeSeriesResponse(BaseModel):
     document_growth: list[DataPoint]
     active_users: list[DataPoint]
     ai_queries: list[DataPoint]
+
+
+# ── Graph Endpoints ───────────────────────────────────────────────────
+
+class GraphNodeInfo(BaseModel):
+    id: str
+    label: str  # maps to entity_name / filename
+    type: str   # 'document', 'folder', 'concept', 'person', etc.
+    document_id: str | None = None
+    folder_id: str | None = None
+    chunk_count: int | None = None
+
+class GraphEdgeInfo(BaseModel):
+    id: str
+    source: str
+    target: str
+    label: str  # relationship
+    weight: float = 1.0
+    chunk_id: str | None = None
+
+class GraphDataResponse(BaseModel):
+    nodes: list[GraphNodeInfo]
+    edges: list[GraphEdgeInfo]
