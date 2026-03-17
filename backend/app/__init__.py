@@ -32,7 +32,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(
         title="Knowledge Intelligence System",
-        description="RAG-based document Q&A powered by ChromaDB + OpenAI",
+        description="RAG-based document Q&A powered by Pinecone + OpenAI/Gemini",
         version="1.0.0",
         lifespan=lifespan,
     )
