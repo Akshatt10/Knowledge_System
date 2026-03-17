@@ -48,6 +48,7 @@ class DocumentInfo(BaseModel):
     uploaded_at: str
     file_type: str
     folder_id: str | None = None
+    summary: str | None = None
 
 
 class DocumentListResponse(BaseModel):
@@ -116,6 +117,7 @@ class QueryResponse(BaseModel):
     sources: list[SourceCitation]
     query_id: str | None = None
     confidence_score: float | None = None
+    follow_up_questions: list[str] = []
 
 
 class FeedbackRequest(BaseModel):
@@ -129,6 +131,18 @@ class FeedbackStatsResponse(BaseModel):
     total_negative: int
     positive_rate_percent: float
     breakdown_by_folder: list[dict] | None = None
+
+
+class AnnotationRequest(BaseModel):
+    """Payload for saving a personal annotation against a query answer."""
+    annotation: str = Field(..., max_length=5000)
+
+
+class AnnotationResponse(BaseModel):
+    """Returned after saving an annotation."""
+    query_id: str
+    annotation: str
+    updated_at: str
 
 
 # ── Admin Endpoints ────────────────────────────────────────────────────
@@ -210,6 +224,7 @@ class GraphNodeInfo(BaseModel):
     document_id: str | None = None
     folder_id: str | None = None
     chunk_count: int | None = None
+    summary: str | None = None
 
 class GraphEdgeInfo(BaseModel):
     id: str

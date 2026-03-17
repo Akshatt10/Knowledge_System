@@ -10,6 +10,8 @@ interface Message {
     confidence_score?: number;
     feedback?: number; // 1, -1, or undefined
     sender?: string;
+    follow_up_questions?: string[];
+    user_annotation?: string;
 }
 
 interface ChatContextType {
@@ -23,6 +25,7 @@ interface ChatContextType {
     setSelectedFolderId: (id: string | null) => void;
     sendQuery: (question: string) => Promise<void>;
     giveFeedback: (messageIndex: number, feedback: number) => Promise<void>;
+    saveAnnotation: (messageIndex: number, annotation: string) => Promise<void>;
     clearChat: () => void;
 }
 
@@ -81,6 +84,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
         } catch (err) {
             console.error("Failed to give feedback", err);
+        }
+    }, [localMessages]);
+
+    const saveAnnotation = useCallback(async (index: number, annotation: string) => {
+        const msg = localMessages[index];
+        if (!msg || !msg.query_id) return;
+
+        try {
+            await queryService.saveAnnotation(msg.query_id, annotation);
+            setLocalMessages(prev => {
+                const updated = [...prev];
+                updated[index] = { ...updated[index], user_annotation: annotation };
+                return updated;
+            });
+        } catch (err) {
+            console.error("Failed to save annotation", err);
+            throw err;
         }
     }, [localMessages]);
 
@@ -148,6 +168,19 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             return updated;
                         });
                     },
+                    onFollowups: (questions: string[]) => {
+                        setLocalMessages(prev => {
+                            const updated = [...prev];
+                            const lastAi = updated[updated.length - 1];
+                            if (lastAi && lastAi.role === 'ai') {
+                                updated[updated.length - 1] = {
+                                    ...lastAi,
+                                    follow_up_questions: questions,
+                                };
+                            }
+                            return updated;
+                        });
+                    },
                     onDone: () => {
                         setLocalMessages(prev => {
                             const lastAi = prev[prev.length - 1];
@@ -197,6 +230,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setSelectedFolderId,
             sendQuery, 
             giveFeedback,
+            saveAnnotation,
             clearChat 
         }}>
             {children}

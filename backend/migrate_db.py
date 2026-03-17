@@ -5,8 +5,6 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.config import settings
 
 async def migrate():
-    # Construct async URL from sync one if needed, or just use the constructed one
-    # The current DATABASE_URL is postgresql+psycopg://... which is compatible with async psycopg
     db_url = settings.DATABASE_URL
     print(f"Connecting to {db_url}")
     
@@ -36,6 +34,39 @@ async def migrate():
                 feedback INTEGER NOT NULL,
                 created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT (now() at time zone 'utc')
             );
+        """))
+
+        # ── Feature 1: Document summary ──────────────────────────────
+        print("Adding summary column to documents...")
+        await conn.execute(text("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                               WHERE table_name='documents' AND column_name='summary') THEN
+                    ALTER TABLE documents ADD COLUMN summary TEXT;
+                    RAISE NOTICE 'Added summary column to documents';
+                END IF;
+            END $$;
+        """))
+
+        # ── Feature 2 & 3: Answer snapshot, follow-ups, annotation ───
+        print("Adding answer_text, follow_up_questions, user_annotation to query_logs...")
+        await conn.execute(text("""
+            DO $$
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                               WHERE table_name='query_logs' AND column_name='answer_text') THEN
+                    ALTER TABLE query_logs ADD COLUMN answer_text TEXT;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                               WHERE table_name='query_logs' AND column_name='follow_up_questions') THEN
+                    ALTER TABLE query_logs ADD COLUMN follow_up_questions JSONB;
+                END IF;
+                IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                               WHERE table_name='query_logs' AND column_name='user_annotation') THEN
+                    ALTER TABLE query_logs ADD COLUMN user_annotation TEXT;
+                END IF;
+            END $$;
         """))
         
         print("Migration completed successfully.")

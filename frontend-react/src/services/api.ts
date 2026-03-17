@@ -79,6 +79,7 @@ export const queryService = {
             onToken: (token: string) => void;
             onSources: (sources: any[]) => void;
             onAnalytics: (data: any) => void;
+            onFollowups?: (questions: string[]) => void;
             onDone: () => void;
             onError: (error: string) => void;
         }
@@ -134,6 +135,8 @@ export const queryService = {
                                 callbacks.onSources(event.sources || []);
                             } else if (event.type === 'analytics') {
                                 callbacks.onAnalytics(event);
+                            } else if (event.type === 'followups') {
+                                callbacks.onFollowups?.(event.questions || []);
                             } else if (event.type === 'done') {
                                 callbacks.onDone();
                             }
@@ -150,6 +153,9 @@ export const queryService = {
 
     giveFeedback: (queryId: string, feedback: number) => 
         api.post(`/query/${queryId}/feedback`, { feedback }),
+
+    saveAnnotation: (queryId: string, annotation: string) =>
+        api.patch(`/query/${queryId}/annotation`, { annotation }),
 };
 
 // Folder Services

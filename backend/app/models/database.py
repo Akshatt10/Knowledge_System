@@ -42,6 +42,9 @@ class Document(Base):
     encrypted_dek = Column(String, nullable=True) # The per-file key encrypted by master key
     s3_uri = Column(String(512), nullable=True) # Storage backup location
 
+    # AI-generated summary (2-sentence description produced on upload)
+    summary = Column(String, nullable=True)
+
 class Room(Base):
     __tablename__ = "rooms"
 
@@ -104,6 +107,11 @@ class QueryLog(Base):
     had_answer = Column(Boolean)           # False if "couldn't find information"
     confidence_score = Column(Float, default=0.0)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Feature: Answer snapshot + follow-ups (Feature 2) + student annotation (Feature 3)
+    answer_text = Column(String, nullable=True)          # full AI answer text
+    follow_up_questions = Column(JSON, nullable=True)    # list[str] of generated follow-ups
+    user_annotation = Column(String, nullable=True)      # student's personal note
 
 
 class GraphNode(Base):

@@ -20,7 +20,9 @@ import {
     ThumbsUp,
     ThumbsDown,
     ShieldCheck,
-    AlertTriangle
+    AlertTriangle,
+    MessageSquarePlus,
+    PenLine
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { roomService, documentService, folderService } from '../services/api';
@@ -55,6 +57,7 @@ const Chat: React.FC = () => {
         setProvider, 
         sendQuery, 
         giveFeedback,
+        saveAnnotation,
         selectedFolderId,
         setSelectedFolderId
     } = useChat();
@@ -63,6 +66,10 @@ const Chat: React.FC = () => {
 
     const [input, setInput] = useState('');
     const [copied, setCopied] = useState(false);
+    // Track which message index has its annotation panel open
+    const [annotatingIndex, setAnnotatingIndex] = useState<number | null>(null);
+    const [annotationDraft, setAnnotationDraft] = useState<string>('');
+    const [savingAnnotation, setSavingAnnotation] = useState(false);
 
     const [showVault, setShowVault] = useState(false);
     const [myDocuments, setMyDocuments] = useState<any[]>([]);
@@ -223,6 +230,28 @@ const Chat: React.FC = () => {
             sendWsMessage(question, provider);
         } else {
             sendQuery(question);
+        }
+    };
+
+    const handleFollowupClick = (question: string) => {
+        if (isBusy) return;
+        setInput(question);
+        // Focus the textarea after setting value
+        setTimeout(() => {
+            const ta = document.querySelector('textarea');
+            ta?.focus();
+        }, 50);
+    };
+
+    const handleSaveAnnotation = async (index: number) => {
+        setSavingAnnotation(true);
+        try {
+            await saveAnnotation(index, annotationDraft);
+            setAnnotatingIndex(null);
+        } catch {
+            // noop — error logged in context
+        } finally {
+            setSavingAnnotation(false);
         }
     };
 
@@ -512,6 +541,27 @@ const Chat: React.FC = () => {
                                                             >
                                                                 <ThumbsDown size={14} className={msg.feedback === -1 ? 'fill-current' : ''} />
                                                             </button>
+                                                            {/* Annotation button */}
+                                                            {!isMultiplayer && (
+                                                                <button
+                                                                    onClick={() => {
+                                                                        if (annotatingIndex === i) {
+                                                                            setAnnotatingIndex(null);
+                                                                        } else {
+                                                                            setAnnotatingIndex(i);
+                                                                            setAnnotationDraft((msg as any).user_annotation || '');
+                                                                        }
+                                                                    }}
+                                                                    className={`p-1.5 rounded-lg transition-all ${
+                                                                        annotatingIndex === i 
+                                                                        ? 'bg-accentGlow/20 text-accentGlow' 
+                                                                        : 'text-textSec hover:text-accentGlow hover:bg-accentGlow/10'
+                                                                    }`}
+                                                                    title="Add personal note"
+                                                                >
+                                                                    <PenLine size={14} />
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </div>
                                                     
@@ -520,8 +570,83 @@ const Chat: React.FC = () => {
                                                     </div>
                                                 </div>
                                             )}
+
+                                            {/* Annotation panel */}
+                                            {isAi && !isMultiplayer && (
+                                                <>
+                                                    {/* Saved annotation display */}
+                                                    {(msg as any).user_annotation && annotatingIndex !== i && (
+                                                        <div className="mt-3 pt-3 border-t border-white/5">
+                                                            <div className="flex items-start gap-2 bg-accentGlow/5 border border-accentGlow/15 rounded-xl p-3">
+                                                                <PenLine size={13} className="text-accentGlow shrink-0 mt-0.5" />
+                                                                <p className="text-xs text-textMain/80 leading-relaxed italic">{(msg as any).user_annotation}</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Inline annotation editor */}
+                                                    <AnimatePresence>
+                                                        {annotatingIndex === i && (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, height: 0 }}
+                                                                animate={{ opacity: 1, height: 'auto' }}
+                                                                exit={{ opacity: 0, height: 0 }}
+                                                                className="mt-3 pt-3 border-t border-white/5 overflow-hidden"
+                                                            >
+                                                                <div className="flex items-center gap-1.5 mb-2 text-xs font-bold text-accentGlow">
+                                                                    <MessageSquarePlus size={13} />
+                                                                    Personal Note
+                                                                </div>
+                                                                <textarea
+                                                                    autoFocus
+                                                                    value={annotationDraft}
+                                                                    onChange={e => setAnnotationDraft(e.target.value)}
+                                                                    placeholder="Add your interpretation, memory hook, or study note here..."
+                                                                    className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-textMain placeholder:text-textSec/40 outline-none focus:border-accentGlow/40 transition-colors resize-none min-h-[80px] font-medium"
+                                                                />
+                                                                <div className="flex gap-2 mt-2 justify-end">
+                                                                    <button
+                                                                        onClick={() => setAnnotatingIndex(null)}
+                                                                        className="px-3 py-1.5 text-xs font-semibold text-textSec hover:text-white transition-colors"
+                                                                    >
+                                                                        Cancel
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleSaveAnnotation(i)}
+                                                                        disabled={savingAnnotation || !annotationDraft.trim()}
+                                                                        className="px-4 py-1.5 bg-accentGlow/20 text-accentGlow border border-accentGlow/30 rounded-lg text-xs font-bold hover:bg-accentGlow/30 transition-all disabled:opacity-50 flex items-center gap-1.5"
+                                                                    >
+                                                                        {savingAnnotation ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                                                                        Save Note
+                                                                    </button>
+                                                                </div>
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
+
+                                    {/* Follow-up question chips — shown below the message bubble */}
+                                    {isAi && !isMultiplayer && (msg as any).follow_up_questions?.length > 0 && (
+                                        <div className="flex flex-wrap gap-2 mt-2 pl-14">
+                                            {(msg as any).follow_up_questions.map((q: string, qi: number) => (
+                                                <motion.button
+                                                    key={qi}
+                                                    initial={{ opacity: 0, y: 6 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ delay: qi * 0.08 }}
+                                                    onClick={() => handleFollowupClick(q)}
+                                                    disabled={isBusy}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 text-textSec hover:bg-accentGlow/10 hover:border-accentGlow/30 hover:text-accentGlow rounded-xl text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed group/chip"
+                                                >
+                                                    <Sparkles size={11} className="opacity-50 group-hover/chip:opacity-100 text-accentGlow" />
+                                                    {q}
+                                                </motion.button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </motion.div>
                             )
                         })}

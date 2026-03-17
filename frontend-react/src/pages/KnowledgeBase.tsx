@@ -21,6 +21,7 @@ interface Document {
     chunk_count: number;
     uploaded_at: string;
     folder_id: string | null;
+    summary?: string | null;
 }
 
 interface Folder {
@@ -44,6 +45,7 @@ const KnowledgeBase: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [isSubmittingFolder, setIsSubmittingFolder] = useState(false);
     const [movingDocId, setMovingDocId] = useState<string | null>(null);
+    const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
 
     const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +92,16 @@ const KnowledgeBase: React.FC = () => {
         } catch (err) {
             alert("Delete failed");
         }
+    };
+
+    const toggleDocSummary = (docId: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setExpandedDocs(prev => {
+            const next = new Set(prev);
+            if (next.has(docId)) next.delete(docId);
+            else next.add(docId);
+            return next;
+        });
     };
 
     const handleMoveDocument = async (docId: string, folderId: string | null) => {
@@ -386,9 +398,22 @@ const KnowledgeBase: React.FC = () => {
                                                 <div className="p-3 bg-white/5 rounded-xl shadow-[inset_0_2px_10px_rgba(255,255,255,0.02)] group-hover:bg-accentGlow/10 group-hover:text-accentGlow transition-colors text-textSec shrink-0">
                                                     <FileText size={24} />
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="font-semibold text-[0.95rem] text-textMain truncate w-full" title={doc.filename}>{doc.filename}</div>
-                                                    <div className="text-xs text-textSec mt-2 flex items-center gap-2 flex-wrap">
+                                                 <div className="flex-1 min-w-0">
+                                                     <div className="font-semibold text-[0.95rem] text-textMain truncate w-full" title={doc.filename}>{doc.filename}</div>
+                                                     {doc.summary && (
+                                                         <div className="mt-1">
+                                                             <p className={`text-xs text-textSec/70 leading-relaxed transition-all duration-300 ${expandedDocs.has(doc.document_id) ? '' : 'line-clamp-2'}`}>
+                                                                 {doc.summary}
+                                                             </p>
+                                                             <button 
+                                                                 onClick={(e) => toggleDocSummary(doc.document_id, e)}
+                                                                 className="text-[10px] text-accentGlow/70 hover:text-accentGlow font-semibold mt-1 transition-colors flex items-center gap-1"
+                                                             >
+                                                                 {expandedDocs.has(doc.document_id) ? 'Show less' : 'Read more'}
+                                                             </button>
+                                                         </div>
+                                                     )}
+                                                     <div className="text-xs text-textSec mt-2 flex items-center gap-2 flex-wrap">
                                                         <span className="px-2 py-0.5 bg-white/10 rounded-md font-medium text-white/70">{doc.chunk_count} chunks</span>
                                                         <span className="opacity-30">•</span>
                                                         <span className="opacity-70">{new Date(doc.uploaded_at).toLocaleDateString()}</span>

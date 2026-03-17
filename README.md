@@ -9,7 +9,10 @@ A production-ready, containerized **RAG (Retrieval-Augmented Generation)** appli
 ## ✨ Features
 
 - **Document Ingestion** — Upload PDF, TXT, DOCX files. Automatic text extraction, chunking, and embedding.
+- **AI Document Summaries** — Auto-generated 2-sentence summaries for every uploaded document.
 - **RAG-Powered Q&A** — Ask questions and get accurate, context-aware answers with source citations.
+- **Contextual Follow-ups** — The AI generates 3 clickable follow-up questions tailored to your query.
+- **Personal Annotations** — Add inline personal study notes/interpretations to any AI answer.
 - **Vector Search** — ChromaDB with `all-MiniLM-L6-v2` sentence-transformer embeddings.
 - **Admin Dashboard** — View collection stats, document count, and system health.
 - **Beautiful UI** — Dark glassmorphism design with chat interface, drag-and-drop upload, and responsive layout.
