@@ -63,6 +63,7 @@ def _run_ingestion_job(
             is_encrypted="TRUE",
             encrypted_dek=result.get("encrypted_dek"),
             s3_uri=result.get("s3_uri"),
+            summary=result.get("summary"),
         )
         db.add(db_doc)
         db.commit()
@@ -196,6 +197,7 @@ async def list_documents(
             uploaded_at=d.uploaded_at.isoformat() if d.uploaded_at else "",
             file_type=d.file_type or "",
             folder_id=d.folder_id,
+            summary=d.summary,
         )
         for d in docs_raw
     ]

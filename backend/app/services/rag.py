@@ -23,10 +23,15 @@ logger = logging.getLogger(__name__)
 
 
 def sigmoid(x: float) -> float:
-    """Normalize a logit score into a probability range [0, 1]."""
-    if x > 20: return 1.0
-    if x < -20: return 0.0
-    return 1 / (1 + math.exp(-x))
+    """Normalize a logit score into a probability range [0, 1].
+    The ms-marco-MiniLM-L-6-v2 model outputs logits typically in the range -10 to +10.
+    We shift the input by +3 so that a logit of -3 becomes 50% confidence,
+    since the LLM can often extract perfect answers even from passages scored around -3.
+    """
+    adjusted_x = x + 3.0
+    if adjusted_x > 20: return 1.0
+    if adjusted_x < -20: return 0.0
+    return 1 / (1 + math.exp(-adjusted_x))
 
 
 SYSTEM_PROMPT = """
@@ -116,7 +121,7 @@ class RAGService:
         """Retrieve documents via hybrid search + re-rank, build prompt context.
 
         Returns:
-            (llm, messages, docs, sources_meta, context_parts)
+            (llm, messages, docs, sources_meta, context_parts, formatted_context)
         """
         llm = self.get_llm(provider=provider)
 
@@ -129,7 +134,7 @@ class RAGService:
             ).all()]
 
             if not doc_ids:
-                return llm, None, [], [], []
+                return llm, None, [], [], [], ""
 
             filter_dict["document_id"] = {"$in": doc_ids}
 
@@ -152,7 +157,7 @@ class RAGService:
             docs = retriever.invoke(question)
 
         if not docs:
-            return llm, None, [], [], []
+            return llm, None, [], [], [], ""
 
         # ── Cross-Encoder Re-ranking ───────────────────────────────────
         try:
@@ -204,7 +209,37 @@ Answer the question using ONLY the context above.
             user_id, len(docs), provider
         )
 
-        return llm, messages, docs, sources_meta, context_parts
+        return llm, messages, docs, sources_meta, context_parts, formatted_context
+
+    # ── Follow-up question generation ──────────────────────────────────
+
+    async def generate_followups(self, formatted_context: str, llm) -> list[str]:
+        """Generate 3 short follow-up questions derived from the retrieved context.
+
+        Uses only the already-fetched context — no extra retrieval cost.
+        Returns an empty list on any failure so callers never break.
+        """
+        try:
+            prompt = (
+                "Based only on the following content, generate 3 short follow-up questions "
+                "a student might naturally want to ask next. Each question must be under 12 words.\n"
+                "Return ONLY a valid JSON array of strings, no extra text or markdown.\n\n"
+                f"{formatted_context[:3000]}"
+            )
+            resp = await llm.ainvoke([("human", prompt)])
+            raw = resp.content.strip()
+            # Strip markdown code fences if the model wraps the JSON
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:].strip()
+            questions = json.loads(raw)
+            if isinstance(questions, list):
+                return [str(q) for q in questions[:3]]
+            return []
+        except Exception as exc:
+            logger.warning("Follow-up generation failed (non-fatal): %s", exc)
+            return []
 
     # ── Synchronous (legacy) query ──────────────────────────────────────
 
@@ -220,7 +255,7 @@ Answer the question using ONLY the context above.
         """Execute RAG pipeline and return grounded answer."""
         start_time = time.time()
 
-        llm, messages, docs, sources_meta, _ = self._retrieve_and_build_context(
+        llm, messages, docs, sources_meta, _, formatted_context = self._retrieve_and_build_context(
             question, user_id, provider, folder_id, db
         )
 
@@ -228,6 +263,7 @@ Answer the question using ONLY the context above.
             return {
                 "answer": "I couldn't find this information in your documents." if not docs else "This folder is empty. Please add some documents to it first.",
                 "sources": [],
+                "follow_up_questions": [],
                 "analytics": {
                     "latency_ms": int((time.time() - start_time) * 1000),
                     "chunks_retrieved": 0,
@@ -262,22 +298,37 @@ Answer the question using ONLY the context above.
         # ── Confidence Calculation ─────────────────────────────────────
         confidence_score = 0.0
         if had_answer and docs:
-            # Derive from re-ranker scores if available, else use chunk density
             scores = [d.metadata.get("relevance_score", d.metadata.get("score", 0.0)) for d in docs]
             if any(s > 0 for s in scores):
-                # Normalize re-ranker scores (assumed range roughly 0-1 or high-neg to high-pos)
-                # For simplicity, we avg top 3 and cap
                 avg_score = sum(sorted(scores, reverse=True)[:3]) / 3.0
                 confidence_score = min(1.0, max(0.0, avg_score))
             else:
-                # Fallback to chunk density score: len(docs)/5.0
-                confidence_score = min(1.0, len(docs) / 5.0)
+                # If no scores > 0 (e.g. reranker skipped and Pinecone score wasn't in metadata)
+                # but we still found an answer, default to a reasonable baseline.
+                confidence_score = 0.85
         
         confidence_score = round(confidence_score, 2)
+
+        # ── Follow-up questions (sync shim via asyncio) ────────────────
+        import asyncio
+        follow_ups: list[str] = []
+        if had_answer and formatted_context:
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # Can't run_until_complete inside an existing loop — skip gracefully
+                    follow_ups = []
+                else:
+                    follow_ups = loop.run_until_complete(
+                        self.generate_followups(formatted_context, llm)
+                    )
+            except Exception:
+                follow_ups = []
 
         return {
             "answer": answer_text,
             "sources": sources_meta,
+            "follow_up_questions": follow_ups,
             "analytics": {
                 "latency_ms": latency_ms,
                 "chunks_retrieved": len(docs),
@@ -297,7 +348,7 @@ Answer the question using ONLY the context above.
         provider: str = "openai",
         folder_id: str = None,
         query_id: str = None,
-        db: Session = None,
+        db: "Session" = None,
     ) -> AsyncGenerator[str, None]:
         """Execute RAG pipeline and yield SSE events token-by-token.
 
@@ -306,7 +357,7 @@ Answer the question using ONLY the context above.
         """
         start_time = time.time()
 
-        llm, messages, docs, sources_meta, _ = self._retrieve_and_build_context(
+        llm, messages, docs, sources_meta, _, formatted_context = self._retrieve_and_build_context(
             question, user_id, provider, folder_id, db
         )
 
@@ -315,6 +366,7 @@ Answer the question using ONLY the context above.
             yield f'data: {json.dumps({"type": "token", "content": no_answer})}\n\n'
             yield f'data: {json.dumps({"type": "sources", "sources": []})}\n\n'
             yield f'data: {json.dumps({"type": "analytics", "query_id": query_id, "latency_ms": int((time.time() - start_time) * 1000), "chunks_retrieved": 0, "had_answer": False, "provider": provider})}\n\n'
+            yield f'data: {json.dumps({"type": "followups", "questions": []})}\n\n'
             yield 'data: {"type": "done"}\n\n'
             return
 
@@ -363,19 +415,28 @@ Answer the question using ONLY the context above.
         # ── Confidence Calculation ─────────────────────────────────────
         confidence_score = 0.0
         if had_answer and docs:
-            # Use normalized scores for a meaningful average
             norm_scores = [sigmoid(d.metadata.get("relevance_score", d.metadata.get("score", 0.0))) 
                           if "relevance_score" in d.metadata else d.metadata.get("score", 0.0) 
                           for d in docs]
             
             if norm_scores:
                 avg_score = sum(sorted(norm_scores, reverse=True)[:3]) / min(3, len(norm_scores))
-                confidence_score = min(1.0, max(0.0, avg_score))
+                if avg_score > 0:
+                    confidence_score = min(1.0, max(0.0, avg_score))
+                else:
+                    # Reranker was skipped and 'score' not naturally present -> Default to baseline
+                    confidence_score = 0.85
         
         confidence_score = round(confidence_score, 2)
 
+        # ── Generate follow-up questions (async, reuse context) ────────
+        follow_ups: list[str] = []
+        if had_answer and formatted_context:
+            follow_ups = await self.generate_followups(formatted_context, llm)
+
         yield f'data: {json.dumps({"type": "sources", "sources": sources_meta})}\n\n'
         yield f'data: {json.dumps({"type": "analytics", "query_id": query_id, "latency_ms": latency_ms, "chunks_retrieved": len(docs), "had_answer": had_answer, "provider": actual_provider, "confidence_score": confidence_score})}\n\n'
+        yield f'data: {json.dumps({"type": "followups", "questions": follow_ups})}\n\n'
         yield 'data: {"type": "done"}\n\n'
 
 

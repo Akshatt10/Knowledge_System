@@ -21,8 +21,35 @@ logger = logging.getLogger(__name__)
 MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024  # 20 MB hard limit
 
 
-def ingest_document(file_path: str | Path, filename: str, file_type: str, user_id: str) -> dict:
+def _generate_doc_summary(total_text: str, llm) -> str | None:
+    """Generate a 2-sentence document summary using the first 800 chars of extracted text.
+
+    Returns None if the LLM call fails — ingestion must never fail because of this.
     """
+    try:
+        excerpt = total_text[:800].strip()
+        if not excerpt:
+            return None
+        prompt = (
+            "In 2 sentences, describe what this document covers and what a student could learn "
+            "from it. Be specific about topics, not generic.\n\n"
+            f"Document content (excerpt):\n{excerpt}"
+        )
+        response = llm.invoke([("human", prompt)])
+        summary = response.content.strip()
+        # Guard against empty or overly long responses
+        if not summary or len(summary) > 1000:
+            return None
+        return summary
+    except Exception as exc:
+        logger.warning("Summary generation failed (non-fatal): %s", exc)
+        return None
+
+
+def ingest_document(file_path: str | Path, filename: str, file_type: str, user_id: str) -> dict:
+    """Ingest a document: load → chunk → embed → encrypt → backup to S3.
+
+    Returns a dict with document_id, filename, chunk_count, and an optional summary.
     """
     doc_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc).isoformat()
@@ -52,6 +79,20 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str, user_i
     total_text = "".join([d.page_content for d in raw_docs]).strip()
     if not raw_docs or not total_text:
         raise ValueError(f"No text could be extracted from '{filename}'. It might be a scanned image or empty file.")
+
+    # Generate AI summary using first 800 chars — must happen before chunking
+    # We import RAG service lazily to avoid circular imports at module load
+    doc_summary: str | None = None
+    try:
+        from app.services.rag import rag_service
+        # Use whichever provider is available; prefer OpenAI, fall back to Gemini
+        llm = rag_service.openai_llm or rag_service.gemini_llm
+        if llm:
+            doc_summary = _generate_doc_summary(total_text, llm)
+        else:
+            logger.warning("No LLM configured — skipping document summary generation")
+    except Exception as exc:
+        logger.warning("Could not obtain LLM for summary generation: %s", exc)
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=settings.CHUNK_SIZE or 1000,
@@ -94,5 +135,6 @@ def ingest_document(file_path: str | Path, filename: str, file_type: str, user_i
         "s3_uri": s3_uri,
         "is_encrypted": True,
         "encrypted_dek": encrypted_dek_b64,
-        "object_name": object_name  # Crucial for rollback logic
+        "object_name": object_name,  # Crucial for rollback logic
+        "summary": doc_summary,
     }

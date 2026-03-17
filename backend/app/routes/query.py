@@ -13,14 +13,28 @@ from app.services.auth import get_current_user, get_db
 from app.models.database import User, QueryLog, QueryFeedback
 from sqlalchemy.orm import Session
 
-from app.models.schemas import QueryRequest, QueryResponse, SourceCitation, FeedbackRequest
+from app.models.schemas import (
+    QueryRequest,
+    QueryResponse,
+    SourceCitation,
+    FeedbackRequest,
+    AnnotationRequest,
+    AnnotationResponse,
+)
 from app.services.rag import rag_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Query"])
 
 
-def _log_query(db: Session, user_id: str, question: str, analytics: dict) -> str | None:
+def _log_query(
+    db: Session,
+    user_id: str,
+    question: str,
+    analytics: dict,
+    answer_text: str | None = None,
+    follow_up_questions: list[str] | None = None,
+) -> str | None:
     """Persist a QueryLog record for analytics and return its ID."""
     try:
         log_id = str(uuid.uuid4())
@@ -33,6 +47,8 @@ def _log_query(db: Session, user_id: str, question: str, analytics: dict) -> str
             chunks_retrieved=analytics.get("chunks_retrieved", 0),
             had_answer=analytics.get("had_answer", False),
             confidence_score=analytics.get("confidence_score", 0.0),
+            answer_text=answer_text,
+            follow_up_questions=follow_up_questions or [],
         )
         db.add(log)
         db.commit()
@@ -67,7 +83,14 @@ async def ask_question(
     query_id = None
     confidence_score = None
     if "analytics" in result:
-        query_id = _log_query(db, str(current_user.id), payload.question, result["analytics"])
+        query_id = _log_query(
+            db,
+            str(current_user.id),
+            payload.question,
+            result["analytics"],
+            answer_text=result.get("answer"),
+            follow_up_questions=result.get("follow_up_questions", []),
+        )
         confidence_score = result["analytics"].get("confidence_score")
 
     sources = [
@@ -80,10 +103,11 @@ async def ask_question(
     ]
 
     return QueryResponse(
-        answer=result["answer"], 
+        answer=result["answer"],
         sources=sources,
         query_id=query_id,
-        confidence_score=confidence_score
+        confidence_score=confidence_score,
+        follow_up_questions=result.get("follow_up_questions", []),
     )
 
 
@@ -100,6 +124,8 @@ async def stream_question(
 
     async def event_generator():
         analytics_data = {}
+        followups_data: list[str] = []
+        full_answer = ""
 
         async for event in rag_service.stream_answer_query(
             question=question,
@@ -111,18 +137,34 @@ async def stream_question(
         ):
             yield event
 
-            # Capture analytics from the analytics event for logging
+            # Capture analytics from the analytics event for later logging
             if '"type": "analytics"' in event or '"type":"analytics"' in event:
                 try:
-                    # Parse the SSE data line
                     data_line = event.strip().replace("data: ", "", 1)
                     analytics_data = json.loads(data_line)
                 except Exception:
                     pass
 
-        # Log query after stream completes
+            # Capture follow-ups for DB persistence
+            if '"type": "followups"' in event or '"type":"followups"' in event:
+                try:
+                    data_line = event.strip().replace("data: ", "", 1)
+                    parsed = json.loads(data_line)
+                    followups_data = parsed.get("questions", [])
+                except Exception:
+                    pass
+
+            # Accumulate answer tokens
+            if '"type": "token"' in event or '"type":"token"' in event:
+                try:
+                    data_line = event.strip().replace("data: ", "", 1)
+                    parsed = json.loads(data_line)
+                    full_answer += parsed.get("content", "")
+                except Exception:
+                    pass
+
+        # Log query after stream completes — use pre-assigned query_id
         if analytics_data:
-            # Re-generate log but use the SAME query_id we sent to frontend
             try:
                 log = QueryLog(
                     id=query_id,
@@ -133,6 +175,8 @@ async def stream_question(
                     chunks_retrieved=analytics_data.get("chunks_retrieved", 0),
                     had_answer=analytics_data.get("had_answer", False),
                     confidence_score=analytics_data.get("confidence_score", 0.0),
+                    answer_text=full_answer or None,
+                    follow_up_questions=followups_data or [],
                 )
                 db.add(log)
                 db.commit()
@@ -173,12 +217,13 @@ async def give_feedback(
     db: Session = Depends(get_db)
 ):
     """Submit thumbs up (1) or thumbs down (-1) for a specific query."""
-    # Verify query exists and belongs to user
-    query = db.query(QueryLog).filter(QueryLog.id == query_id, QueryLog.user_id == str(current_user.id)).first()
+    query = db.query(QueryLog).filter(
+        QueryLog.id == query_id,
+        QueryLog.user_id == str(current_user.id)
+    ).first()
     if not query:
         raise HTTPException(status_code=404, detail="Query log not found")
 
-    # Check for existing feedback to update or create new
     existing = db.query(QueryFeedback).filter(QueryFeedback.query_id == query_id).first()
     if existing:
         existing.feedback = payload.feedback
@@ -194,3 +239,28 @@ async def give_feedback(
     
     db.commit()
     return {"status": "success", "feedback": payload.feedback}
+
+
+@router.patch("/query/{query_id}/annotation", response_model=AnnotationResponse)
+async def save_annotation(
+    query_id: str,
+    payload: AnnotationRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Save or update a personal annotation on an AI answer."""
+    query = db.query(QueryLog).filter(
+        QueryLog.id == query_id,
+        QueryLog.user_id == str(current_user.id)
+    ).first()
+    if not query:
+        raise HTTPException(status_code=404, detail="Query not found")
+
+    query.user_annotation = payload.annotation
+    db.commit()
+
+    return AnnotationResponse(
+        query_id=query_id,
+        annotation=payload.annotation,
+        updated_at=datetime.utcnow().isoformat(),
+    )
