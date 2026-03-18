@@ -22,6 +22,7 @@ from app.models.schemas import (
     UploadResult,
     UploadJobResponse,
     JobStatusResponse,
+    URLIngestRequest,
 )
 from app.services.ingestion import ingest_document
 from app.services.vectorstore import vector_store
@@ -152,6 +153,118 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="No valid documents were provided.")
 
     return jobs
+
+
+def _run_url_ingestion_job(
+    job_id: str,
+    url: str,
+    user_id: str,
+    folder_id: str | None = None,
+):
+    """Background task: scrape URL, clean HTML, ingest as text document."""
+    import requests
+    from bs4 import BeautifulSoup
+
+    db = SessionLocal()
+    try:
+        job_store.update(job_id, status="processing")
+
+        # 1. Fetch the page (use realistic browser headers to avoid 403s)
+        resp = requests.get(url, timeout=15, headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Connection": "keep-alive",
+        })
+        resp.raise_for_status()
+
+        # 2. Parse and clean HTML
+        soup = BeautifulSoup(resp.content, "html.parser")
+        for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+            tag.decompose()
+        text = soup.get_text(separator="\n", strip=True)
+
+        if not text or len(text.strip()) < 50:
+            raise ValueError("Could not extract meaningful text from this URL.")
+
+        # 3. Derive a readable filename from the page title or URL
+        title_tag = soup.find("title")
+        title = title_tag.get_text(strip=True) if title_tag else url
+        # Sanitize for use as a filename
+        safe_title = "".join(c if c.isalnum() or c in " -_" else "" for c in title)[:80].strip()
+        filename = f"web-{safe_title or 'page'}.txt"
+
+        # 4. Save to temp file
+        temp_path = Path(settings.UPLOAD_DIR) / f"{job_id}_{filename}"
+        with open(temp_path, "w", encoding="utf-8") as f:
+            f.write(text)
+
+        try:
+            result = ingest_document(
+                file_path=str(temp_path),
+                filename=filename,
+                file_type="txt",
+                user_id=user_id,
+            )
+
+            db_doc = Document(
+                id=result["document_id"],
+                user_id=user_id,
+                filename=result["filename"],
+                file_type="txt",
+                chunk_count=str(result["chunk_count"]),
+                folder_id=folder_id,
+                is_encrypted="TRUE",
+                encrypted_dek=result.get("encrypted_dek"),
+                s3_uri=result.get("s3_uri"),
+                summary=result.get("summary"),
+            )
+            db.add(db_doc)
+            db.commit()
+
+            job_store.update(job_id, status="done", result={
+                "document_id": result["document_id"],
+                "filename": result["filename"],
+                "chunk_count": result["chunk_count"],
+            })
+            logger.info("URL ingestion job %s completed for %s", job_id, url)
+        finally:
+            if temp_path.exists():
+                os.remove(temp_path)
+
+    except Exception as exc:
+        db.rollback()
+        logger.exception("URL ingestion job %s failed for %s", job_id, url)
+        job_store.update(job_id, status="failed", error=str(exc))
+    finally:
+        db.close()
+
+
+@router.post("/documents/ingest-url", response_model=UploadJobResponse)
+async def ingest_from_url(
+    payload: URLIngestRequest,
+    background_tasks: BackgroundTasks = BackgroundTasks(),
+    current_user: User = Depends(get_current_user),
+):
+    """Scrape a URL and ingest its text content as a document."""
+    job_id = str(uuid.uuid4())
+    job_store.create(job_id, user_id=str(current_user.id), filename=payload.url)
+
+    background_tasks.add_task(
+        _run_url_ingestion_job,
+        job_id=job_id,
+        url=payload.url,
+        user_id=str(current_user.id),
+        folder_id=payload.folder_id,
+    )
+
+    return UploadJobResponse(
+        job_id=job_id,
+        filename=payload.url,
+        status="pending",
+        message="URL accepted. Scraping and ingesting in background.",
+    )
 
 
 @router.get("/documents/jobs/{job_id}", response_model=JobStatusResponse)

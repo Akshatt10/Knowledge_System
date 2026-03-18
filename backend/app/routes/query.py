@@ -20,8 +20,14 @@ from app.models.schemas import (
     FeedbackRequest,
     AnnotationRequest,
     AnnotationResponse,
+    BatchQueryRequest,
+    BatchCheckpointResult,
+    BatchReportResponse,
+    CheckListExtractionRequest,
 )
 from app.services.rag import rag_service
+from app.services.vectorstore import vector_store
+from langchain_core.messages import SystemMessage, HumanMessage
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["Query"])
@@ -109,6 +115,163 @@ async def ask_question(
         confidence_score=confidence_score,
         follow_up_questions=result.get("follow_up_questions", []),
     )
+
+
+@router.post("/query/batch", response_model=BatchReportResponse)
+async def batch_research(
+    payload: BatchQueryRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Run a batch of checklist questions against the RAG engine.
+
+    Each question is processed sequentially through the existing pipeline.
+    Returns a compiled report with coverage indicators per checkpoint.
+    """
+    results: list[BatchCheckpointResult] = []
+    strong = partial = none = 0
+
+    for question in payload.questions:
+        question = question.strip()
+        if not question:
+            continue
+
+        try:
+            result = rag_service.answer_query(
+                question=question,
+                user_id=str(current_user.id),
+                provider=payload.provider,
+                folder_id=payload.folder_id,
+                db=db,
+            )
+
+            analytics = result.get("analytics", {})
+            had_answer = analytics.get("had_answer", False)
+            confidence = analytics.get("confidence_score", 0.0)
+
+            # Classify coverage
+            if had_answer and confidence >= 0.6:
+                coverage = "strong"
+                strong += 1
+            elif had_answer:
+                coverage = "partial"
+                partial += 1
+            else:
+                coverage = "none"
+                none += 1
+
+            sources = [
+                SourceCitation(
+                    filename=s["filename"],
+                    chunk_excerpt=s["chunk_excerpt"],
+                    relevance_score=s.get("relevance_score"),
+                )
+                for s in result.get("sources", [])
+            ]
+
+            # Log each query individually for analytics
+            _log_query(
+                db, str(current_user.id), question, analytics,
+                answer_text=result.get("answer"),
+                follow_up_questions=result.get("follow_up_questions", []),
+            )
+
+            results.append(BatchCheckpointResult(
+                question=question,
+                coverage=coverage,
+                answer=result["answer"],
+                sources=sources,
+                confidence_score=confidence,
+            ))
+
+        except Exception as exc:
+            logger.error("Batch query failed for '%s': %s", question, exc)
+            results.append(BatchCheckpointResult(
+                question=question,
+                coverage="none",
+                answer=f"Error processing this checkpoint: {str(exc)}",
+                sources=[],
+                confidence_score=0.0,
+            ))
+            none += 1
+
+    return BatchReportResponse(
+        results=results,
+        total_checkpoints=len(payload.questions),
+        strong_coverage=strong,
+        partial_coverage=partial,
+        no_coverage=none,
+    )
+
+
+@router.post("/query/extract-checklist", response_model=list[str])
+async def extract_checklist(
+    payload: CheckListExtractionRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Auto-extract checklist items from a specific document.
+    
+    1. Fetches all chunks for the document.
+    2. Uses LLM to extract requirements/checkpoints as a JSON array of strings.
+    """
+    
+    if not vector_store.vectorstore:
+        raise HTTPException(status_code=500, detail="Vector store not initialized")
+
+    try:
+        # 1. Fetch chunks for the document
+        docs = vector_store.vectorstore.similarity_search(
+            query="checklist requirements steps format items", # Dummy topic-focused query
+            k=50, # High K to get most/all chunks
+            filter={
+                "document_id": payload.document_id,
+                "user_id": str(current_user.id)
+            }
+        )
+        
+        if not docs:
+            raise HTTPException(status_code=404, detail="Document not found or is empty.")
+            
+        context = "\n\n---\n".join([d.page_content for d in docs])
+        
+        # 2. Get LLM and prompt
+        llm = rag_service.get_llm(provider=payload.provider)
+        
+        system_prompt = (
+            "You are a strict data extraction AI. Extract all checklist items, checkpoints, "
+            "requirements, or to-do tasks from the provided text.\n"
+            "CRITICAL RULES:\n"
+            "- Return ONLY a valid JSON array of strings.\n"
+            "- Do NOT wrap the JSON in Markdown formatting (no ```json).\n"
+            "- Do NOT include any conversational text or explanations.\n"
+            "- Example output: [\"Verify user input\", \"Deploy to staging\"]\n"
+            "If no checklist items are found, return precisely: []"
+        )
+        
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=f"TEXT TO EXTRACT FROM:\n{context}")
+        ]
+        
+        response = llm.invoke(messages)
+        content_str = str(response.content).strip()
+        
+        if content_str.startswith("```json"):
+            content_str = content_str[7:].strip()
+        if content_str.endswith("```"):
+            content_str = content_str[:-3].strip()
+            
+        extracted: list[str] = json.loads(content_str)
+        if not isinstance(extracted, list):
+            raise ValueError("LLM did not return a list")
+            
+        return extracted
+
+    except Exception as exc:
+        logger.exception("Failed to extract checklist: %s", exc)
+        raise HTTPException(status_code=500, detail="Checklist extraction failed")
+
+
 
 
 @router.get("/query/stream")
