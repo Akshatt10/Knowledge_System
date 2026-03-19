@@ -100,6 +100,8 @@ const Chat: React.FC = () => {
     const [allDocuments, setAllDocuments] = useState<any[]>([]);
     const [showExtractorModal, setShowExtractorModal] = useState(false);
     const [extractingId, setExtractingId] = useState<string | null>(null);
+    const [researchTasks, setResearchTasks] = useState<string[]>([]);
+    const [newTaskInput, setNewTaskInput] = useState('');
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -301,19 +303,15 @@ const Chat: React.FC = () => {
         }
     };
 
-    const handleBatchResearch = async (e: React.FormEvent) => {
-        e.preventDefault();
-        const text = input.trim();
-        if (!text || batchLoading) return;
-
-        const questions = text.split('\n').map(q => q.replace(/^[\-\*\d\.\)\]]+\s*\[?[xX ]?\]?\s*/, '').trim()).filter(Boolean);
-        if (questions.length === 0) return;
+    const handleBatchResearch = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        if (researchTasks.length === 0 || batchLoading) return;
 
         setBatchLoading(true);
         setBatchReport(null);
         try {
             const res = await queryService.batchResearch({
-                questions,
+                questions: researchTasks,
                 folder_id: selectedFolderId,
                 provider,
             });
@@ -330,7 +328,7 @@ const Chat: React.FC = () => {
                 return updated;
             });
             
-            setInput('');
+            // Do not clear the text input since input is used for normal chat
         } catch (err) {
             console.error('Batch research failed', err);
         } finally {
@@ -378,8 +376,7 @@ const Chat: React.FC = () => {
         try {
             const res = await queryService.extractChecklist({ document_id: documentId, provider });
             if (res.data && res.data.length > 0) {
-                const formatted = res.data.map((item: string) => `- [ ] ${item}`).join('\n');
-                setInput(formatted);
+                setResearchTasks(res.data);
             } else {
                 alert("No checklist items could be found in this document.");
             }
@@ -390,6 +387,17 @@ const Chat: React.FC = () => {
         } finally {
             setExtractingId(null);
         }
+    };
+
+    const handleAddResearchTask = (e?: React.FormEvent | React.KeyboardEvent) => {
+        if (e) e.preventDefault();
+        if (!newTaskInput.trim()) return;
+        setResearchTasks(prev => [...prev, newTaskInput.trim()]);
+        setNewTaskInput('');
+    };
+
+    const handleRemoveResearchTask = (index: number) => {
+        setResearchTasks(prev => prev.filter((_, i) => i !== index));
     };
 
     return (
@@ -799,76 +807,12 @@ const Chat: React.FC = () => {
                             </div>
                         </div>
                     )}
-                    <div ref={messagesEndRef} className="h-4 shrink-0" />
-                </div>
-
-                {/* Chat Input Area */}
-                <div className="p-4 md:p-6 border-t border-white/10 bg-black/20 backdrop-blur-xl shrink-0 z-20">
-                    {/* Research Mode Toggle */}
-                    {!isMultiplayer && (
-                        <div className="max-w-[1000px] mx-auto mb-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => { setResearchMode(!researchMode); setBatchReport(null); }}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                                        researchMode
-                                        ? 'bg-purple-500/15 border-purple-400/40 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
-                                        : 'bg-white/5 border-white/5 text-textSec hover:border-white/10 hover:text-textMain'
-                                    }`}
-                                >
-                                    <FlaskConical size={14} />
-                                    Research Mode
-                                </button>
-                                {researchMode && (
-                                    <span className="text-[10px] text-purple-300/60 font-medium hidden sm:inline-block">Paste your checklist or...</span>
-                                )}
-                            </div>
-                            
-                            {researchMode && (
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setShowExtractorModal(true)}
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-accentGlow/10 text-accentGlow/90 hover:text-accentGlow hover:bg-accentGlow/20 rounded-xl text-xs font-bold border border-accentGlow/20 transition-all font-outfit"
-                                    >
-                                        <Sparkles size={14} className="animate-pulse" />
-                                        Extract from Document
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <form onSubmit={researchMode ? handleBatchResearch : handleSend} className="max-w-[1000px] mx-auto relative group">
-                        <div className="absolute -inset-1 bg-accent-gradient rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                        <div className="relative flex gap-3 items-end bg-panelBg rounded-xl p-2 border border-white/10 focus-within:border-accentGlow/50 transition-colors shadow-lg">
-                            <textarea
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey && !researchMode) {
-                                        e.preventDefault();
-                                        handleSend(e);
-                                    }
-                                }}
-                                disabled={isMultiplayer && !isConnected}
-                                placeholder={researchMode ? "Paste your checklist here...\n1. What is the regulatory framework?\n2. Find competitive analysis data\n3. Key papers on methodology" : isMultiplayer && !isConnected ? "Connecting to multiplayer room..." : isMultiplayer ? "Type @ai to ask the Agent... or just chat here" : "Query the knowledge base..."}
-                                className={`flex-1 bg-transparent border-none text-textMain p-3 resize-none text-[0.95rem] outline-none placeholder:text-textSec/50 custom-scrollbar disabled:opacity-50 ${researchMode ? 'h-32 max-h-[300px]' : 'h-14 max-h-[200px]'}`}
-                            />
-                            <button
-                                type="submit"
-                                disabled={(researchMode ? batchLoading : isBusy) || !input.trim() || (isMultiplayer && !isConnected)}
-                                className="w-12 h-12 shrink-0 rounded-lg bg-accent-gradient flex items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-glow disabled:opacity-50 disabled:hover:shadow-none disabled:cursor-not-allowed shrink-0"
-                            >
-                                {batchLoading ? <Loader2 size={20} className="text-white animate-spin" /> : researchMode ? <BarChart3 size={20} className="text-white" /> : <Send size={20} className="text-white ml-0.5" />}
-                            </button>
-                        </div>
-                    </form>
 
                     {/* Report History */}
                     {researchMode && !batchReport && batchReportHistory.length > 0 && (
                         <motion.div
                             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                            className="max-w-[1000px] mx-auto mt-4 pt-3 border-t border-white/5"
+                            className="max-w-[1000px] w-full mx-auto mt-2 pt-3"
                         >
                             <div className="flex items-center justify-between mb-2">
                                 <h5 className="text-xs font-bold text-textSec uppercase tracking-wider flex items-center gap-1.5">
@@ -908,7 +852,7 @@ const Chat: React.FC = () => {
 
                     {/* Batch Research Report */}
                     {batchReport && (
-                        <div className="max-w-[1000px] mx-auto mt-4 bg-black/50 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl flex flex-col max-h-[70vh] relative overflow-hidden">
+                        <div className="max-w-[1000px] w-full mx-auto mt-4 bg-black/50 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl flex flex-col relative overflow-hidden shrink-0">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-4">
                                 <div>
@@ -941,7 +885,7 @@ const Chat: React.FC = () => {
                                 </div>
                             </div>
                             
-                            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4">
+                            <div className="flex-1 pr-2 space-y-4">
                                 {batchReport.results.map((r: any, i: number) => (
                                     <details key={i} className="group bg-white/5 rounded-xl border border-white/5 overflow-hidden">
                                         <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors">
@@ -976,6 +920,128 @@ const Chat: React.FC = () => {
                             </div>
                         </div>
                     )}
+
+                    <div ref={messagesEndRef} className="h-4 shrink-0" />
+                </div>
+
+                {/* Chat Input Area */}
+                <div className="p-4 md:p-6 border-t border-white/10 bg-black/20 backdrop-blur-xl shrink-0 z-20">
+                    {/* Research Mode Toggle */}
+                    {!isMultiplayer && (
+                        <div className="max-w-[1000px] mx-auto mb-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => { setResearchMode(!researchMode); setBatchReport(null); }}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
+                                        researchMode
+                                        ? 'bg-purple-500/15 border-purple-400/40 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
+                                        : 'bg-white/5 border-white/5 text-textSec hover:border-white/10 hover:text-textMain'
+                                    }`}
+                                >
+                                    <FlaskConical size={14} />
+                                    Research Mode
+                                </button>
+                                {researchMode && !batchReport && (
+                                    <span className="text-[10px] text-purple-300/60 font-medium hidden sm:inline-block">Paste your checklist or...</span>
+                                )}
+                            </div>
+                            
+                            {researchMode && !batchReport && (
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setShowExtractorModal(true)}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-accentGlow/10 text-accentGlow/90 hover:text-accentGlow hover:bg-accentGlow/20 rounded-xl text-xs font-bold border border-accentGlow/20 transition-all font-outfit"
+                                    >
+                                        <Sparkles size={14} className="animate-pulse" />
+                                        Extract from Document
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {researchMode && !batchReport ? (
+                        <div className="max-w-[1000px] mx-auto bg-black/40 border border-white/10 rounded-2xl p-4 backdrop-blur-md shadow-lg">
+                            <div className="flex flex-col gap-2 mb-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                                {researchTasks.length === 0 ? (
+                                    <div className="text-center py-6 text-white/30 text-sm font-medium border border-dashed border-white/10 rounded-xl">
+                                        No requirements added. Extract from a document or type below.
+                                    </div>
+                                ) : (
+                                    researchTasks.map((task, idx) => (
+                                        <div key={idx} className="group flex items-start gap-3 p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors">
+                                            <div className="mt-0.5 shrink-0 w-4 h-4 rounded-md border border-accentGlow/50 flex items-center justify-center bg-accentGlow/10 shadow-[0_0_8px_rgba(59,130,246,0.3)]">
+                                                <CheckCircle2 size={10} className="text-accentGlow" />
+                                            </div>
+                                            <div className="flex-1 text-sm text-textMain/90 font-medium leading-relaxed break-words">{task}</div>
+                                            <button 
+                                                onClick={() => handleRemoveResearchTask(idx)}
+                                                className="shrink-0 p-1.5 opacity-0 group-hover:opacity-100 text-textSec hover:text-danger hover:bg-danger/20 rounded-md transition-all"
+                                                title="Remove requirement"
+                                            >
+                                                <XCircle size={14} />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                            
+                            <div className="flex gap-2 items-center flex-col sm:flex-row">
+                                <div className="w-full relative flex items-center bg-black/50 border border-white/10 rounded-xl px-3 py-2 flex-1 focus-within:border-accentGlow/50 transition-colors">
+                                    <PlusCircle size={16} className="text-textSec shrink-0" />
+                                    <input 
+                                        value={newTaskInput}
+                                        onChange={e => setNewTaskInput(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && handleAddResearchTask(e)}
+                                        placeholder="Add a new requirement to check..."
+                                        className="w-full bg-transparent border-none outline-none text-sm text-white px-3 placeholder:text-textSec/50"
+                                    />
+                                    <button 
+                                        onClick={handleAddResearchTask}
+                                        disabled={!newTaskInput.trim()}
+                                        className="text-xs font-bold text-accentGlow px-2 disabled:opacity-0 transition-opacity"
+                                    >
+                                        ADD
+                                    </button>
+                                </div>
+                                <button 
+                                    onClick={() => handleBatchResearch()}
+                                    disabled={researchTasks.length === 0 || batchLoading}
+                                    className="w-full sm:w-auto shrink-0 flex justify-center items-center gap-2 px-5 py-2.5 bg-accent-gradient text-white text-sm font-bold rounded-xl shadow-glow transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100 disabled:shadow-none"
+                                >
+                                    {batchLoading ? <Loader2 size={16} className="animate-spin" /> : <BarChart3 size={16} />}
+                                    Run Audit
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <form onSubmit={handleSend} className="max-w-[1000px] mx-auto relative group">
+                            <div className="absolute -inset-1 bg-accent-gradient rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                            <div className="relative flex gap-3 items-end bg-panelBg rounded-xl p-2 border border-white/10 focus-within:border-accentGlow/50 transition-colors shadow-lg">
+                                <textarea
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSend(e);
+                                        }
+                                    }}
+                                    disabled={isMultiplayer && !isConnected}
+                                    placeholder={isMultiplayer && !isConnected ? "Connecting to multiplayer room..." : isMultiplayer ? "Type @ai to ask the Agent... or just chat here" : "Query the knowledge base..."}
+                                    className="flex-1 bg-transparent border-none text-textMain p-3 resize-none text-[0.95rem] outline-none placeholder:text-textSec/50 custom-scrollbar disabled:opacity-50 h-14 max-h-[200px]"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={isBusy || !input.trim() || (isMultiplayer && !isConnected)}
+                                    className="w-12 h-12 shrink-0 rounded-lg bg-accent-gradient flex items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-glow disabled:opacity-50 disabled:hover:shadow-none disabled:cursor-not-allowed shrink-0"
+                                >
+                                    <Send size={20} className="text-white ml-0.5" />
+                                </button>
+                            </div>
+                        </form>
+                    )}
+
                 </div>
             </div>
 

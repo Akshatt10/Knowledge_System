@@ -253,7 +253,24 @@ async def extract_checklist(
             HumanMessage(content=f"TEXT TO EXTRACT FROM:\n{context}")
         ]
         
-        response = llm.invoke(messages)
+        try:
+            response = llm.invoke(messages)
+        except Exception as e:
+            error_str = str(e)
+            logger.warning("Primary LLM (%s) failed during extraction: %s", payload.provider, error_str)
+            
+            if payload.provider == "gemini" and ("429" in error_str or "RESOURCE_EXHAUSTED" in error_str):
+                rag_service._trip_gemini_breaker()
+                
+            if payload.provider == "gemini" and rag_service.openai_llm:
+                logger.info("Extraction falling back to OpenAI LLM...")
+                response = rag_service.openai_llm.invoke(messages)
+            elif payload.provider == "openai" and rag_service.gemini_llm:
+                logger.info("Extraction falling back to Gemini LLM...")
+                response = rag_service.gemini_llm.invoke(messages)
+            else:
+                raise
+                
         content_str = str(response.content).strip()
         
         if content_str.startswith("```json"):

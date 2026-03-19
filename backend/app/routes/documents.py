@@ -236,7 +236,15 @@ def _run_url_ingestion_job(
     except Exception as exc:
         db.rollback()
         logger.exception("URL ingestion job %s failed for %s", job_id, url)
-        job_store.update(job_id, status="failed", error=str(exc))
+        
+        error_msg = str(exc)
+        if hasattr(exc, "response") and exc.response is not None:
+            if exc.response.status_code in (403, 401):
+                error_msg = "This website explicitly blocks automated AI scrapers and bots. Please download the page as a PDF/Text file and upload it manually."
+            elif exc.response.status_code == 404:
+                error_msg = "The webpage could not be found (404). Please check the URL."
+                
+        job_store.update(job_id, status="failed", error=error_msg)
     finally:
         db.close()
 
