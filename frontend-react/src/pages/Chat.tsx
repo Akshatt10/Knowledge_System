@@ -23,13 +23,9 @@ import {
     AlertTriangle,
     MessageSquarePlus,
     PenLine,
-    FlaskConical,
-    BarChart3,
-    Download,
-    XCircle,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import { roomService, documentService, folderService, queryService } from '../services/api';
+import { roomService, documentService, folderService } from '../services/api';
 import { useSearchParams } from 'react-router-dom';
 import { useWebSocket } from '../context/WebSocketContext';
 import { useAuth } from '../context/AuthContext';
@@ -90,18 +86,7 @@ const Chat: React.FC = () => {
     const [folders, setFolders] = useState<any[]>([]);
     const [showFolderSelector, setShowFolderSelector] = useState(false);
 
-    // Research Mode state
-    const [researchMode, setResearchMode] = useState(false);
-    const [batchLoading, setBatchLoading] = useState(false);
-    const [batchReport, setBatchReport] = useState<any | null>(null);
-    const [batchReportHistory, setBatchReportHistory] = useState<any[]>([]);
-    
-    // Checklist Extraction
-    const [allDocuments, setAllDocuments] = useState<any[]>([]);
-    const [showExtractorModal, setShowExtractorModal] = useState(false);
-    const [extractingId, setExtractingId] = useState<string | null>(null);
-    const [researchTasks, setResearchTasks] = useState<string[]>([]);
-    const [newTaskInput, setNewTaskInput] = useState('');
+
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -122,8 +107,7 @@ const Chat: React.FC = () => {
                 const foldersRes = await folderService.getAll();
                 if (isMounted) setFolders(foldersRes.data.folders);
                 
-                const docsRes = await documentService.getAll();
-                if (isMounted) setAllDocuments(docsRes.data.documents || []);
+
             } catch (err) {
                 console.error("Failed to load global data", err);
             }
@@ -152,39 +136,11 @@ const Chat: React.FC = () => {
             }
         };
 
-        const loadSavedReport = () => {
-            const savedHistory = localStorage.getItem('nexus_batch_reports_history');
-            if (savedHistory && isMounted) {
-                try {
-                    const parsed = JSON.parse(savedHistory);
-                    if (Array.isArray(parsed)) {
-                        setBatchReportHistory(parsed);
-                    }
-                } catch (e) {
-                    console.error("Failed to parse saved report history", e);
-                }
-            }
-            
-            // For backward compatibility: check for old single report
-            const oldSaved = localStorage.getItem('nexus_batch_report');
-            if (oldSaved && isMounted) {
-                try {
-                    const parsed = JSON.parse(oldSaved);
-                    setBatchReportHistory([{
-                        id: Date.now(),
-                        date: new Date().toISOString(),
-                        report: parsed
-                    }]);
-                    setBatchReport(parsed);
-                    setResearchMode(true);
-                    localStorage.removeItem('nexus_batch_report');
-                } catch (e) {}
-            }
-        };
+
 
         loadGlobalData();
         initRoom();
-        loadSavedReport();
+
 
         return () => { isMounted = false; };
     }, [roomId, connectToRoom, disconnect, setInitialHistory]);
@@ -303,102 +259,7 @@ const Chat: React.FC = () => {
         }
     };
 
-    const handleBatchResearch = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (researchTasks.length === 0 || batchLoading) return;
 
-        setBatchLoading(true);
-        setBatchReport(null);
-        try {
-            const res = await queryService.batchResearch({
-                questions: researchTasks,
-                folder_id: selectedFolderId,
-                provider,
-            });
-            setBatchReport(res.data);
-            
-            const newHistoryItem = {
-                id: Date.now().toString(),
-                date: new Date().toISOString(),
-                report: res.data
-            };
-            setBatchReportHistory(prev => {
-                const updated = [newHistoryItem, ...prev].slice(0, 20); // Keep last 20
-                localStorage.setItem('nexus_batch_reports_history', JSON.stringify(updated));
-                return updated;
-            });
-            
-            // Do not clear the text input since input is used for normal chat
-        } catch (err) {
-            console.error('Batch research failed', err);
-        } finally {
-            setBatchLoading(false);
-        }
-    };
-
-    const handleDownloadReport = () => {
-        if (!batchReport) return;
-        let md = `# Research Report\n\n*Generated on: ${new Date().toLocaleString()}*\n\n---\n\n`;
-        
-        batchReport.results.forEach((r: any) => {
-            md += `## ${r.question}\n**Coverage:** ${r.coverage.toUpperCase()}\n\n${r.answer}\n\n`;
-            if (r.sources && r.sources.length > 0) {
-                md += `**Sources:**\n` + r.sources.map((s: any) => `- ${s.filename}`).join('\n') + `\n\n`;
-            }
-            md += `---\n\n`;
-        });
-        
-        md += `\n**Summary:**\n- Strong: ${batchReport.strong_coverage}\n- Partial: ${batchReport.partial_coverage}\n- Gaps: ${batchReport.no_coverage}\n`;
-        
-        const blob = new Blob([md], { type: 'text/markdown' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `Batch_Report_${new Date().toISOString().split('T')[0]}.md`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    };
-
-    const handleClearReport = () => {
-        setBatchReport(null);
-    };
-    
-    const handleClearAllHistory = () => {
-        setBatchReport(null);
-        setBatchReportHistory([]);
-        localStorage.removeItem('nexus_batch_reports_history');
-    };
-    
-    const handleExtractChecklist = async (documentId: string) => {
-        setExtractingId(documentId);
-        try {
-            const res = await queryService.extractChecklist({ document_id: documentId, provider });
-            if (res.data && res.data.length > 0) {
-                setResearchTasks(res.data);
-            } else {
-                alert("No checklist items could be found in this document.");
-            }
-            setShowExtractorModal(false);
-        } catch (err: any) {
-            console.error("Failed to extract checklist", err);
-            alert("Failed to extract checklist: " + (err.response?.data?.detail || err.message));
-        } finally {
-            setExtractingId(null);
-        }
-    };
-
-    const handleAddResearchTask = (e?: React.FormEvent | React.KeyboardEvent) => {
-        if (e) e.preventDefault();
-        if (!newTaskInput.trim()) return;
-        setResearchTasks(prev => [...prev, newTaskInput.trim()]);
-        setNewTaskInput('');
-    };
-
-    const handleRemoveResearchTask = (index: number) => {
-        setResearchTasks(prev => prev.filter((_, i) => i !== index));
-    };
 
     return (
         <div className="flex-1 flex flex-row h-screen p-4 lg:p-6 overflow-hidden max-w-full">
@@ -808,240 +669,36 @@ const Chat: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Report History */}
-                    {researchMode && !batchReport && batchReportHistory.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                            className="max-w-[1000px] w-full mx-auto mt-2 pt-3"
-                        >
-                            <div className="flex items-center justify-between mb-2">
-                                <h5 className="text-xs font-bold text-textSec uppercase tracking-wider flex items-center gap-1.5">
-                                    <BarChart3 size={12} />
-                                    Recent Reports
-                                </h5>
-                                <button
-                                    onClick={handleClearAllHistory}
-                                    className="text-[10px] text-danger/80 hover:text-danger hover:underline font-semibold"
-                                >
-                                    Clear History
-                                </button>
-                            </div>
-                            <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
-                                {batchReportHistory.map((item) => (
-                                    <button
-                                        key={item.id}
-                                        onClick={() => setBatchReport(item.report)}
-                                        className="shrink-0 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 text-left transition-all min-w-[200px] max-w-[280px]"
-                                    >
-                                        <div className="text-sm font-bold text-white truncate">
-                                            {item.report.results[0]?.question || "Empty Report"}
-                                        </div>
-                                        <div className="flex items-center justify-between mt-1">
-                                            <span className="text-[10px] text-textSec font-medium">
-                                                {new Date(item.date).toLocaleDateString()}
-                                            </span>
-                                            <span className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded font-bold">
-                                                {item.report.total_checkpoints} items
-                                            </span>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* Batch Research Report */}
-                    {batchReport && (
-                        <div className="max-w-[1000px] w-full mx-auto mt-4 bg-black/50 border border-white/10 rounded-2xl p-6 backdrop-blur-xl shadow-2xl flex flex-col relative overflow-hidden shrink-0">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
-                            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-4">
-                                <div>
-                                    <h4 className="text-xl font-outfit font-bold text-white flex items-center gap-2">
-                                        <BarChart3 size={22} className="text-purple-400" />
-                                        Research Report
-                                    </h4>
-                                    <div className="flex gap-4 text-xs font-bold mt-2 bg-black/40 px-3 py-1.5 rounded-lg border border-white/5 w-fit">
-                                        <span className="text-emerald-400">✓ {batchReport.strong_coverage} Strong</span>
-                                        <span className="text-amber-400">◐ {batchReport.partial_coverage} Partial</span>
-                                        <span className="text-red-400">✗ {batchReport.no_coverage} Gap{batchReport.no_coverage !== 1 ? 's' : ''}</span>
-                                    </div>
-                                </div>
-                                
-                                <div className="flex items-center gap-2 w-full sm:w-auto">
-                                    <button 
-                                        onClick={handleDownloadReport}
-                                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3 py-2 bg-white/5 hover:bg-white/10 text-white text-xs font-bold rounded-lg border border-white/10 transition-colors"
-                                    >
-                                        <Download size={14} />
-                                        Save logic.md
-                                    </button>
-                                    <button 
-                                        onClick={handleClearReport}
-                                        className="flex items-center justify-center p-2 bg-danger/10 hover:bg-danger/20 text-danger rounded-lg border border-danger/20 transition-colors"
-                                        title="Clear Report"
-                                    >
-                                        <XCircle size={14} />
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div className="flex-1 pr-2 space-y-4">
-                                {batchReport.results.map((r: any, i: number) => (
-                                    <details key={i} className="group bg-white/5 rounded-xl border border-white/5 overflow-hidden">
-                                        <summary className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-white/5 transition-colors">
-                                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${
-                                                r.coverage === 'strong' ? 'bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.6)]' :
-                                                r.coverage === 'partial' ? 'bg-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.6)]' :
-                                                'bg-red-400 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
-                                            }`} />
-                                            <span className="text-sm font-semibold text-textMain flex-1">{r.question}</span>
-                                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${
-                                                r.coverage === 'strong' ? 'bg-emerald-500/20 text-emerald-300' :
-                                                r.coverage === 'partial' ? 'bg-amber-500/20 text-amber-300' :
-                                                'bg-red-500/20 text-red-300'
-                                            }`}>{r.coverage}</span>
-                                        </summary>
-                                        <div className="px-5 pb-5 pt-3 border-t border-white/5 bg-black/20">
-                                            <div className="text-sm text-textMain/90 leading-relaxed whitespace-pre-wrap break-words prose prose-invert prose-sm max-w-none prose-p:my-2 prose-headings:text-purple-300 prose-strong:text-purple-200">
-                                                <ReactMarkdown>{r.answer}</ReactMarkdown>
-                                            </div>
-                                            {r.sources.length > 0 && (
-                                                <div className="mt-3 flex flex-wrap gap-2">
-                                                    {r.sources.map((s: any, j: number) => (
-                                                        <span key={j} className="text-[10px] bg-white/5 border border-white/10 px-2 py-1 rounded-md text-textSec font-medium">
-                                                            📄 {s.filename}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </details>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
                     <div ref={messagesEndRef} className="h-4 shrink-0" />
                 </div>
 
                 {/* Chat Input Area */}
                 <div className="p-4 md:p-6 border-t border-white/10 bg-black/20 backdrop-blur-xl shrink-0 z-20">
-                    {/* Research Mode Toggle */}
-                    {!isMultiplayer && (
-                        <div className="max-w-[1000px] mx-auto mb-3 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => { setResearchMode(!researchMode); setBatchReport(null); }}
-                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                                        researchMode
-                                        ? 'bg-purple-500/15 border-purple-400/40 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.2)]'
-                                        : 'bg-white/5 border-white/5 text-textSec hover:border-white/10 hover:text-textMain'
-                                    }`}
-                                >
-                                    <FlaskConical size={14} />
-                                    Research Mode
-                                </button>
-                                {researchMode && !batchReport && (
-                                    <span className="text-[10px] text-purple-300/60 font-medium hidden sm:inline-block">Paste your checklist or...</span>
-                                )}
-                            </div>
-                            
-                            {researchMode && !batchReport && (
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setShowExtractorModal(true)}
-                                        className="flex items-center gap-2 px-3 py-1.5 bg-accentGlow/10 text-accentGlow/90 hover:text-accentGlow hover:bg-accentGlow/20 rounded-xl text-xs font-bold border border-accentGlow/20 transition-all font-outfit"
-                                    >
-                                        <Sparkles size={14} className="animate-pulse" />
-                                        Extract from Document
-                                    </button>
-                                </div>
-                            )}
+                    <form onSubmit={handleSend} className="max-w-[1000px] mx-auto relative group">
+                        <div className="absolute -inset-1 bg-accent-gradient rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
+                        <div className="relative flex gap-3 items-end bg-panelBg rounded-xl p-2 border border-white/10 focus-within:border-accentGlow/50 transition-colors shadow-lg">
+                            <textarea
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey) {
+                                        e.preventDefault();
+                                        handleSend(e);
+                                    }
+                                }}
+                                disabled={isMultiplayer && !isConnected}
+                                placeholder={isMultiplayer && !isConnected ? "Connecting to multiplayer room..." : isMultiplayer ? "Type @ai to ask the Agent... or just chat here" : "Query the knowledge base..."}
+                                className="flex-1 bg-transparent border-none text-textMain p-3 resize-none text-[0.95rem] outline-none placeholder:text-textSec/50 custom-scrollbar disabled:opacity-50 h-14 max-h-[200px]"
+                            />
+                            <button
+                                type="submit"
+                                disabled={isBusy || !input.trim() || (isMultiplayer && !isConnected)}
+                                className="w-12 h-12 shrink-0 rounded-lg bg-accent-gradient flex items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-glow disabled:opacity-50 disabled:hover:shadow-none disabled:cursor-not-allowed"
+                            >
+                                <Send size={20} className="text-white ml-0.5" />
+                            </button>
                         </div>
-                    )}
-
-                    {researchMode && !batchReport ? (
-                        <div className="max-w-[1000px] mx-auto bg-black/40 border border-white/10 rounded-2xl p-4 backdrop-blur-md shadow-lg">
-                            <div className="flex flex-col gap-2 mb-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                                {researchTasks.length === 0 ? (
-                                    <div className="text-center py-6 text-white/30 text-sm font-medium border border-dashed border-white/10 rounded-xl">
-                                        No requirements added. Extract from a document or type below.
-                                    </div>
-                                ) : (
-                                    researchTasks.map((task, idx) => (
-                                        <div key={idx} className="group flex items-start gap-3 p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors">
-                                            <div className="mt-0.5 shrink-0 w-4 h-4 rounded-md border border-accentGlow/50 flex items-center justify-center bg-accentGlow/10 shadow-[0_0_8px_rgba(59,130,246,0.3)]">
-                                                <CheckCircle2 size={10} className="text-accentGlow" />
-                                            </div>
-                                            <div className="flex-1 text-sm text-textMain/90 font-medium leading-relaxed break-words">{task}</div>
-                                            <button 
-                                                onClick={() => handleRemoveResearchTask(idx)}
-                                                className="shrink-0 p-1.5 opacity-0 group-hover:opacity-100 text-textSec hover:text-danger hover:bg-danger/20 rounded-md transition-all"
-                                                title="Remove requirement"
-                                            >
-                                                <XCircle size={14} />
-                                            </button>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                            
-                            <div className="flex gap-2 items-center flex-col sm:flex-row">
-                                <div className="w-full relative flex items-center bg-black/50 border border-white/10 rounded-xl px-3 py-2 flex-1 focus-within:border-accentGlow/50 transition-colors">
-                                    <PlusCircle size={16} className="text-textSec shrink-0" />
-                                    <input 
-                                        value={newTaskInput}
-                                        onChange={e => setNewTaskInput(e.target.value)}
-                                        onKeyDown={e => e.key === 'Enter' && handleAddResearchTask(e)}
-                                        placeholder="Add a new requirement to check..."
-                                        className="w-full bg-transparent border-none outline-none text-sm text-white px-3 placeholder:text-textSec/50"
-                                    />
-                                    <button 
-                                        onClick={handleAddResearchTask}
-                                        disabled={!newTaskInput.trim()}
-                                        className="text-xs font-bold text-accentGlow px-2 disabled:opacity-0 transition-opacity"
-                                    >
-                                        ADD
-                                    </button>
-                                </div>
-                                <button 
-                                    onClick={() => handleBatchResearch()}
-                                    disabled={researchTasks.length === 0 || batchLoading}
-                                    className="w-full sm:w-auto shrink-0 flex justify-center items-center gap-2 px-5 py-2.5 bg-accent-gradient text-white text-sm font-bold rounded-xl shadow-glow transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 disabled:scale-100 disabled:shadow-none"
-                                >
-                                    {batchLoading ? <Loader2 size={16} className="animate-spin" /> : <BarChart3 size={16} />}
-                                    Run Audit
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <form onSubmit={handleSend} className="max-w-[1000px] mx-auto relative group">
-                            <div className="absolute -inset-1 bg-accent-gradient rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                            <div className="relative flex gap-3 items-end bg-panelBg rounded-xl p-2 border border-white/10 focus-within:border-accentGlow/50 transition-colors shadow-lg">
-                                <textarea
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleSend(e);
-                                        }
-                                    }}
-                                    disabled={isMultiplayer && !isConnected}
-                                    placeholder={isMultiplayer && !isConnected ? "Connecting to multiplayer room..." : isMultiplayer ? "Type @ai to ask the Agent... or just chat here" : "Query the knowledge base..."}
-                                    className="flex-1 bg-transparent border-none text-textMain p-3 resize-none text-[0.95rem] outline-none placeholder:text-textSec/50 custom-scrollbar disabled:opacity-50 h-14 max-h-[200px]"
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={isBusy || !input.trim() || (isMultiplayer && !isConnected)}
-                                    className="w-12 h-12 shrink-0 rounded-lg bg-accent-gradient flex items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-glow disabled:opacity-50 disabled:hover:shadow-none disabled:cursor-not-allowed shrink-0"
-                                >
-                                    <Send size={20} className="text-white ml-0.5" />
-                                </button>
-                            </div>
-                        </form>
-                    )}
-
+                    </form>
                 </div>
             </div>
 
@@ -1171,84 +828,6 @@ const Chat: React.FC = () => {
                 )}
             </AnimatePresence>
 
-            {/* Extractor Modal */}
-            <AnimatePresence>
-                {showExtractorModal && (
-                    <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[1000] p-4">
-                        <motion.div
-                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
-                            animate={{ scale: 1, opacity: 1, y: 0 }}
-                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-                            className="glass-panel w-full max-w-[480px] p-6 md:p-8 flex flex-col gap-6 relative overflow-hidden shadow-2xl max-h-[85vh] flex-col"
-                        >
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-accentGlow/10 rounded-full blur-[80px] -z-10 pointer-events-none"></div>
-
-                            <div className="flex items-center justify-between shrink-0">
-                                <div>
-                                    <h3 className="text-2xl font-outfit font-bold text-white flex items-center gap-3">
-                                        <Sparkles size={28} className="text-accentGlow drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
-                                        Extract Checklist
-                                    </h3>
-                                    <p className="text-sm font-medium text-textSec/90 mt-1">
-                                        Select a Notion or uploaded document to automatically extract the checklist.
-                                    </p>
-                                </div>
-                                <button 
-                                    onClick={() => setShowExtractorModal(false)}
-                                    className="p-2 border border-white/5 hover:bg-white/10 rounded-lg text-textSec transition-colors"
-                                >
-                                    <XCircle size={20} />
-                                </button>
-                            </div>
-
-                            <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar pr-2 flex flex-col gap-2">
-                                {allDocuments.length === 0 ? (
-                                    <div className="text-center p-8 bg-white/5 rounded-xl border border-white/10">
-                                        <FileText size={48} className="mx-auto text-white/20 mb-3" />
-                                        <p className="text-sm font-medium text-textSec">No documents in your Knowledge Base.</p>
-                                    </div>
-                                ) : (
-                                    allDocuments.map((doc) => (
-                                        <div 
-                                            key={doc.document_id}
-                                            className="group flex flex-col bg-black/40 border border-white/5 hover:border-accentGlow/30 rounded-xl p-3 transition-all cursor-pointer"
-                                            onClick={() => handleExtractChecklist(doc.document_id)}
-                                        >
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3 overflow-hidden">
-                                                    <div className="w-10 h-10 rounded-lg bg-accentGlow/10 flex items-center justify-center shrink-0">
-                                                        <FileText size={18} className="text-accentGlow" />
-                                                    </div>
-                                                    <div className="truncate">
-                                                        <h4 className="text-sm font-bold text-white truncate break-words" title={doc.filename}>{doc.filename}</h4>
-                                                        <p className="text-[10px] text-textSec uppercase font-semibold mt-0.5 tracking-wider">
-                                                            {doc.file_type || 'TXT'} • {doc.chunk_count} CHUNKS
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                
-                                                <button 
-                                                    className="w-8 h-8 rounded-lg bg-white/5 group-hover:bg-accentGlow/20 flex items-center justify-center shrink-0 group-hover:text-accentGlow transition-colors disabled:opacity-50"
-                                                    disabled={extractingId === doc.document_id}
-                                                >
-                                                    {extractingId === doc.document_id ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}
-                                                </button>
-                                            </div>
-                                            {extractingId === doc.document_id && (
-                                                <div className="mt-3 bg-accentGlow/5 rounded-md p-2 flex items-center gap-2 border border-accentGlow/20 justify-center">
-                                                    <span className="text-xs font-bold text-accentGlow animate-pulse">
-                                                        Agents are reading and extracting requirements...
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
         </div>
     );
 };

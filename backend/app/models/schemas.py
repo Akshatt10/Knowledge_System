@@ -258,6 +258,17 @@ class CLIStatusResponse(BaseModel):
     queries_this_week: int
     vault_health: float  # average confidence of last 20 queries
 
+class DeepResearchRequest(BaseModel):
+    """Payload for generating a deep research long-form report."""
+    prompt: str = Field(..., max_length=5000)
+    folder_id: str | None = None
+    provider: str = "gemini"
+
+class DeepResearchResponse(BaseModel):
+    """Response containing the long-form markdown report."""
+    report: str
+    sources: list[SourceCitation]
+
 # ── Graph Endpoints ───────────────────────────────────────────────────
 
 class GraphNodeInfo(BaseModel):

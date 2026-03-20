@@ -75,6 +75,9 @@ export const queryService = {
     ask: (data: { question: string; provider: string; chat_history?: any[]; folder_id?: string | null }) =>
         api.post('/query', data),
 
+    deepResearchReport: (data: { prompt: string; provider: string; folder_id?: string | null }) => 
+        api.post('/query/deep-research', data),
+
     streamAsk: async (
         params: { question: string; provider: string; folder_id?: string | null },
         callbacks: {

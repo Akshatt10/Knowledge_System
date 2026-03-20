@@ -249,7 +249,7 @@ const Connectors: React.FC = () => {
                                 Last synced:{' '}
                                 <span className="text-textMain/80">
                                     {account.last_synced_at
-                                        ? new Date(account.last_synced_at).toLocaleString()
+                                        ? new Date(account.last_synced_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
                                         : 'Never'}
                                 </span>
                             </span>
