@@ -249,7 +249,7 @@ const Connectors: React.FC = () => {
                                 Last synced:{' '}
                                 <span className="text-textMain/80">
                                     {account.last_synced_at
-                                        ? new Date(account.last_synced_at).toLocaleString()
+                                        ? new Date(account.last_synced_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
                                         : 'Never'}
                                 </span>
                             </span>
@@ -266,8 +266,19 @@ const Connectors: React.FC = () => {
                                 ) : (
                                     <FolderSync size={18} />
                                 )}
-                                Browse & Import
+                                Browse & Sync
                             </button>
+
+                            {provider === 'notion' && (
+                                <button
+                                    onClick={() => handleConnect('notion')}
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 text-textSec text-sm font-semibold hover:bg-white/10 hover:text-textMain transition-all justify-center sm:w-auto"
+                                    title="Add or remove pages Nexus can access"
+                                >
+                                    <ExternalLink size={18} />
+                                    Manage Pages
+                                </button>
+                            )}
 
                             <button
                                 onClick={() => handleDisconnect(account.id)}
@@ -296,6 +307,15 @@ const Connectors: React.FC = () => {
                                             <h3 className="text-textMain text-sm font-semibold flex items-center gap-2 shrink-0">
                                                 <FileText size={16} className="text-accentGlow" />
                                                 Available Files ({remoteFiles.length})
+                                                <button
+                                                    onClick={() => handleBrowseFiles(pickerProvider)}
+                                                    disabled={loadingFiles}
+                                                    className="ml-2 flex items-center gap-1 text-[10px] text-textSec hover:text-accentGlow transition-colors uppercase tracking-widest font-bold"
+                                                    title="Re-fetch latest pages from source"
+                                                >
+                                                    <FolderSync size={12} className={loadingFiles && activePicker === pickerProvider ? 'animate-spin' : ''} />
+                                                    Refresh
+                                                </button>
                                             </h3>
                                             <div className="flex items-center justify-between md:justify-end gap-4 w-full md:w-auto">
                                                 <button

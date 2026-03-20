@@ -22,7 +22,7 @@ import {
     ShieldCheck,
     AlertTriangle,
     MessageSquarePlus,
-    PenLine
+    PenLine,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { roomService, documentService, folderService } from '../services/api';
@@ -86,6 +86,8 @@ const Chat: React.FC = () => {
     const [folders, setFolders] = useState<any[]>([]);
     const [showFolderSelector, setShowFolderSelector] = useState(false);
 
+
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const isMultiplayer = !!roomId;
@@ -104,8 +106,10 @@ const Chat: React.FC = () => {
             try {
                 const foldersRes = await folderService.getAll();
                 if (isMounted) setFolders(foldersRes.data.folders);
+                
+
             } catch (err) {
-                console.error("Failed to load folders", err);
+                console.error("Failed to load global data", err);
             }
         };
 
@@ -132,13 +136,13 @@ const Chat: React.FC = () => {
             }
         };
 
+
+
         loadGlobalData();
         initRoom();
 
-        return () => {
-            isMounted = false;
-            disconnect();
-        };
+
+        return () => { isMounted = false; };
     }, [roomId, connectToRoom, disconnect, setInitialHistory]);
 
 
@@ -254,6 +258,8 @@ const Chat: React.FC = () => {
             setSavingAnnotation(false);
         }
     };
+
+
 
     return (
         <div className="flex-1 flex flex-row h-screen p-4 lg:p-6 overflow-hidden max-w-full">
@@ -662,6 +668,7 @@ const Chat: React.FC = () => {
                             </div>
                         </div>
                     )}
+
                     <div ref={messagesEndRef} className="h-4 shrink-0" />
                 </div>
 
@@ -681,12 +688,12 @@ const Chat: React.FC = () => {
                                 }}
                                 disabled={isMultiplayer && !isConnected}
                                 placeholder={isMultiplayer && !isConnected ? "Connecting to multiplayer room..." : isMultiplayer ? "Type @ai to ask the Agent... or just chat here" : "Query the knowledge base..."}
-                                className="flex-1 bg-transparent border-none text-textMain p-3 resize-none h-14 max-h-[200px] text-[0.95rem] outline-none placeholder:text-textSec/50 custom-scrollbar disabled:opacity-50"
+                                className="flex-1 bg-transparent border-none text-textMain p-3 resize-none text-[0.95rem] outline-none placeholder:text-textSec/50 custom-scrollbar disabled:opacity-50 h-14 max-h-[200px]"
                             />
                             <button
                                 type="submit"
                                 disabled={isBusy || !input.trim() || (isMultiplayer && !isConnected)}
-                                className="w-12 h-12 shrink-0 rounded-lg bg-accent-gradient flex items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-glow disabled:opacity-50 disabled:hover:shadow-none disabled:cursor-not-allowed shrink-0"
+                                className="w-12 h-12 shrink-0 rounded-lg bg-accent-gradient flex items-center justify-center cursor-pointer transition-all duration-300 hover:shadow-glow disabled:opacity-50 disabled:hover:shadow-none disabled:cursor-not-allowed"
                             >
                                 <Send size={20} className="text-white ml-0.5" />
                             </button>
@@ -820,6 +827,7 @@ const Chat: React.FC = () => {
                     </div>
                 )}
             </AnimatePresence>
+
         </div>
     );
 };

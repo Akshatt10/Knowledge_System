@@ -10,7 +10,9 @@ import {
     Users,
     Folder as FolderIcon,
     ChevronRight,
-    FolderPlus
+    FolderPlus,
+    Link,
+    CheckCircle2,
 } from 'lucide-react';
 import { documentService, roomService, folderService } from '../services/api';
 import { useNavigate } from 'react-router-dom';
@@ -46,6 +48,11 @@ const KnowledgeBase: React.FC = () => {
     const [isSubmittingFolder, setIsSubmittingFolder] = useState(false);
     const [movingDocId, setMovingDocId] = useState<string | null>(null);
     const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
+
+    // URL Ingestion state
+    const [urlInput, setUrlInput] = useState('');
+    const [urlIngesting, setUrlIngesting] = useState(false);
+    const [urlSuccess, setUrlSuccess] = useState(false);
 
     const navigate = useNavigate();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -266,6 +273,62 @@ const KnowledgeBase: React.FC = () => {
                                         className="h-full bg-accent-gradient shadow-[0_0_10px_rgba(0,240,255,0.8)]"
                                     />
                                 </div>
+                            </div>
+                        )}
+
+                        {/* URL Ingestion Input */}
+                        {!uploading && (
+                            <div className="mt-5">
+                                <form
+                                    onSubmit={async (e) => {
+                                        e.preventDefault();
+                                        if (!urlInput.trim() || urlIngesting) return;
+                                        setUrlIngesting(true);
+                                        setUrlSuccess(false);
+                                        setError(null);
+                                        try {
+                                            const res = await documentService.ingestUrl({
+                                                url: urlInput.trim(),
+                                                folder_id: activeFolderId,
+                                            });
+                                            // Poll for completion
+                                            await documentService.pollJobUntilDone(res.data.job_id);
+                                            setUrlInput('');
+                                            setUrlSuccess(true);
+                                            setTimeout(() => setUrlSuccess(false), 3000);
+                                            loadData();
+                                        } catch (err: any) {
+                                            setError(err?.response?.data?.detail || 'Failed to ingest URL');
+                                        } finally {
+                                            setUrlIngesting(false);
+                                        }
+                                    }}
+                                    className="flex gap-2 items-center"
+                                >
+                                    <div className="relative flex-1">
+                                        <Link size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-textSec/50" />
+                                        <input
+                                            type="url"
+                                            value={urlInput}
+                                            onChange={(e) => setUrlInput(e.target.value)}
+                                            placeholder="Paste a URL to ingest as a document..."
+                                            className="w-full bg-black/30 border border-white/10 pl-10 pr-4 py-3 rounded-xl text-sm text-textMain outline-none focus:border-accentGlow/50 focus:ring-2 focus:ring-accentGlow/10 transition-all placeholder:text-textSec/40"
+                                        />
+                                    </div>
+                                    <button
+                                        type="submit"
+                                        disabled={urlIngesting || !urlInput.trim()}
+                                        className="px-5 py-3 rounded-xl bg-accent-gradient text-white text-sm font-bold whitespace-nowrap transition-all hover:shadow-glow disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                    >
+                                        {urlIngesting ? (
+                                            <><Loader2 size={16} className="animate-spin" /> Ingesting...</>
+                                        ) : urlSuccess ? (
+                                            <><CheckCircle2 size={16} /> Done!</>
+                                        ) : (
+                                            'Ingest URL'
+                                        )}
+                                    </button>
+                                </form>
                             </div>
                         )}
 

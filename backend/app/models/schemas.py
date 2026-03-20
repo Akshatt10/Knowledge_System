@@ -145,6 +145,49 @@ class AnnotationResponse(BaseModel):
     updated_at: str
 
 
+# ── Batch Research Mode ────────────────────────────────────────────────
+
+
+class BatchQueryRequest(BaseModel):
+    """User submits a checklist of questions to run as a batch."""
+    questions: list[str] = Field(..., min_length=1, max_length=50)
+    folder_id: str | None = Field(default=None, description="Optional folder to scope all queries to.")
+    provider: str = Field(default="openai")
+
+
+class CheckListExtractionRequest(BaseModel):
+    """Request to extract a checklist automatically from a document."""
+    document_id: str
+    provider: str = Field(default="openai")
+
+
+class BatchCheckpointResult(BaseModel):
+    """Result for a single checklist item in batch research."""
+    question: str
+    coverage: str  # "strong", "partial", "none"
+    answer: str
+    sources: list[SourceCitation]
+    confidence_score: float | None = None
+
+
+class BatchReportResponse(BaseModel):
+    """Compiled research report from batch queries."""
+    results: list[BatchCheckpointResult]
+    total_checkpoints: int
+    strong_coverage: int
+    partial_coverage: int
+    no_coverage: int
+
+
+# ── URL Ingestion ──────────────────────────────────────────────────────
+
+
+class URLIngestRequest(BaseModel):
+    """User pastes a URL to scrape and ingest as a document."""
+    url: str = Field(..., min_length=10, max_length=2000)
+    folder_id: str | None = None
+
+
 # ── Admin Endpoints ────────────────────────────────────────────────────
 
 
@@ -214,6 +257,17 @@ class CLIStatusResponse(BaseModel):
     total_docs: int
     queries_this_week: int
     vault_health: float  # average confidence of last 20 queries
+
+class DeepResearchRequest(BaseModel):
+    """Payload for generating a deep research long-form report."""
+    prompt: str = Field(..., max_length=5000)
+    folder_id: str | None = None
+    provider: str = "gemini"
+
+class DeepResearchResponse(BaseModel):
+    """Response containing the long-form markdown report."""
+    report: str
+    sources: list[SourceCitation]
 
 # ── Graph Endpoints ───────────────────────────────────────────────────
 

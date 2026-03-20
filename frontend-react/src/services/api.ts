@@ -66,12 +66,17 @@ export const documentService = {
     },
     getAll: () => api.get('/documents'),
     delete: (id: string) => api.delete(`/documents/${id}`),
+    ingestUrl: (data: { url: string; folder_id?: string | null }) =>
+        api.post('/documents/ingest-url', data),
 };
 
 // Query Services
 export const queryService = {
     ask: (data: { question: string; provider: string; chat_history?: any[]; folder_id?: string | null }) =>
         api.post('/query', data),
+
+    deepResearchReport: (data: { prompt: string; provider: string; folder_id?: string | null }) => 
+        api.post('/query/deep-research', data),
 
     streamAsk: async (
         params: { question: string; provider: string; folder_id?: string | null },
@@ -156,6 +161,12 @@ export const queryService = {
 
     saveAnnotation: (queryId: string, annotation: string) =>
         api.patch(`/query/${queryId}/annotation`, { annotation }),
+
+    batchResearch: (data: { questions: string[]; folder_id?: string | null; provider?: string }) =>
+        api.post('/query/batch', data),
+
+    extractChecklist: (data: { document_id: string; provider?: string }) =>
+        api.post('/query/extract-checklist', data),
 };
 
 // Folder Services

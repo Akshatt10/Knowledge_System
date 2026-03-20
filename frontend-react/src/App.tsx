@@ -9,6 +9,7 @@ import Chat from './pages/Chat';
 import KnowledgeBase from './pages/KnowledgeBase';
 import KnowledgeGraph from './pages/KnowledgeGraph';
 import Connectors from './pages/Connectors';
+import DeepResearch from './pages/DeepResearch';
 import AdminStats from './pages/AdminStats';
 import UserManagement from './pages/UserManagement';
 import { WebSocketProvider } from './context/WebSocketContext';
@@ -87,6 +88,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <MainLayout><Connectors /></MainLayout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/deep-research"
+              element={
+                <ProtectedRoute>
+                  <MainLayout><DeepResearch /></MainLayout>
                 </ProtectedRoute>
               }
             />
