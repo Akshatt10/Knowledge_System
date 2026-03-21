@@ -72,14 +72,14 @@ export const documentService = {
 
 // Query Services
 export const queryService = {
-    ask: (data: { question: string; provider: string; chat_history?: any[]; folder_id?: string | null }) =>
+    ask: (data: { question: string; provider?: string; chat_history?: any[]; folder_id?: string | null }) =>
         api.post('/query', data),
 
-    deepResearchReport: (data: { prompt: string; provider: string; folder_id?: string | null }) => 
+    deepResearchReport: (data: { prompt: string; provider?: string; folder_id?: string | null }) => 
         api.post('/query/deep-research', data),
 
     streamAsk: async (
-        params: { question: string; provider: string; folder_id?: string | null },
+        params: { question: string; provider?: string; folder_id?: string | null },
         callbacks: {
             onToken: (token: string) => void;
             onSources: (sources: any[]) => void;
@@ -92,8 +92,10 @@ export const queryService = {
         const token = localStorage.getItem('token');
         const queryParams = new URLSearchParams({
             question: params.question,
-            provider: params.provider,
         });
+        if (params.provider) {
+            queryParams.set('provider', params.provider);
+        }
         if (params.folder_id) {
             queryParams.set('folder_id', params.folder_id);
         }

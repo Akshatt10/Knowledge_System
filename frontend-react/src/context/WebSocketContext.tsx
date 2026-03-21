@@ -26,7 +26,7 @@ interface WebSocketContextType {
     error: string | null;
     connectToRoom: (roomId: string) => void;
     disconnect: () => void;
-    sendMessage: (prompt: string, provider: string) => void;
+    sendMessage: (prompt: string) => void;
     setInitialHistory: (history: ChatMessage[]) => void;
 }
 
@@ -161,9 +161,9 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         reconnectCount.current = 0;
     }, []);
 
-    const sendMessage = useCallback((prompt: string, provider: string) => {
+    const sendMessage = useCallback((prompt: string) => {
         if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-            ws.current.send(JSON.stringify({ prompt, provider }));
+            ws.current.send(JSON.stringify({ prompt }));
         } else {
             setError("Cannot send message: WebSocket is disconnected.");
         }

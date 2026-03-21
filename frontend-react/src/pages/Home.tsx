@@ -108,7 +108,7 @@ const Home: React.FC = () => {
         if (diffInSeconds < 60) return 'just now';
         if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
         if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}h ago`;
-        return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        return date.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', month: 'short', day: 'numeric' });
     };
 
     const containerVariants = {
@@ -125,7 +125,7 @@ const Home: React.FC = () => {
     } as const;
 
     return (
-        <div className="flex-1 p-6 md:p-10 lg:p-12 overflow-y-auto custom-scrollbar relative bg-[#070709]">
+        <div className="flex-1 p-6 md:p-10 lg:p-12 overflow-y-auto custom-scrollbar relative bg-mainBg">
             {/* Minimal Background Elements */}
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accentGlow/20 to-transparent"></div>
             <div className="absolute top-[-5%] right-[-2%] w-[500px] h-[500px] bg-accentGlow/5 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
@@ -137,31 +137,31 @@ const Home: React.FC = () => {
                 animate="visible"
             >
                 {/* ── Header: Simple & Welcoming ─────────────────────────── */}
-                <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-white/5 pb-10">
+                <motion.div variants={itemVariants} className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-border-color/10 pb-10">
                     <div>
                         <div className="flex items-center gap-2 mb-3">
                             <Activity size={12} className="text-accentGlow animate-pulse" />
                             <span className="text-[10px] font-bold text-accentGlow uppercase tracking-[0.3em] font-outfit">{getGreeting()}</span>
                         </div>
-                        <h1 className="text-3xl md:text-5xl font-outfit font-bold text-white tracking-tight leading-tight">
+                        <h1 className="text-3xl md:text-5xl font-outfit font-bold text-textMain tracking-tight leading-tight">
                             Your <span className="text-transparent bg-clip-text bg-accent-gradient">Dashboard</span>
                         </h1>
                         <p className="text-textSec mt-3 text-lg font-medium">
-                            Welcome back, <span className="text-white">{username}</span>. Here's what's happening today.
+                            Welcome back, <span className="text-textMain">{username}</span>. Here's what's happening today.
                         </p>
                     </div>
                     
                     <motion.div 
                         whileHover={{ scale: 1.02 }}
-                        className="glass-panel px-6 py-4 rounded-xl flex items-center gap-4 bg-white/[0.03] border-white/5 shadow-xl group cursor-default"
+                        className="glass-panel px-6 py-4 rounded-xl flex items-center gap-4 bg-panelBg/20 border-border-color/10 shadow-xl group cursor-default"
                     >
                         <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center border border-orange-500/20">
                             <Flame size={20} className="text-orange-500" />
                         </div>
                         <div>
                             <div className="text-[10px] font-bold text-textSec uppercase tracking-widest leading-none mb-1">Daily Streak</div>
-                            <div className="text-3xl font-outfit font-bold text-white flex items-center gap-2 leading-none">
-                                {streak} <span className="text-sm text-white/20 font-medium">DAYS</span>
+                            <div className="text-3xl font-outfit font-bold text-textMain flex items-center gap-2 leading-none">
+                                {streak} <span className="text-sm text-textSec/20 font-bold tracking-tighter">DAYS</span>
                             </div>
                         </div>
                     </motion.div>
@@ -192,23 +192,23 @@ const Home: React.FC = () => {
                             glow: 'bg-emerald-400/5'
                         }
                     ].map((stat) => (
-                        <motion.div 
+                         <motion.div 
                             key={stat.label}
                             variants={itemVariants}
-                            whileHover={{ y: -3, backgroundColor: 'rgba(255,255,255,0.05)' }}
-                            className="glass-panel p-6 rounded-2xl border border-white/5 bg-white/[0.02] relative overflow-hidden group transition-all"
+                            whileHover={{ y: -3, backgroundColor: 'rgba(var(--panel-bg), 0.4)' }}
+                            className="glass-panel p-6 rounded-2xl border border-border-color/10 bg-panelBg/20 relative overflow-hidden group transition-all"
                         >
                             <div className={`absolute -right-4 -top-4 w-20 h-20 rounded-full blur-[40px] ${stat.glow}`}></div>
                             <div className="flex items-center gap-5">
-                                <div className="w-12 h-12 rounded-xl bg-black/40 flex items-center justify-center border border-white/10 group-hover:bg-white/5 transition-colors">
+                                <div className="w-12 h-12 rounded-xl bg-panelBg/40 flex items-center justify-center border border-border-color/10 group-hover:bg-panelBg/60 transition-colors">
                                     {stat.icon}
                                 </div>
                                 <div>
-                                    <h3 className="text-3xl font-outfit font-bold text-white leading-none">{stat.value}</h3>
+                                    <h3 className="text-3xl font-outfit font-bold text-textMain leading-none">{stat.value}</h3>
                                     <p className="text-[11px] font-bold text-textSec uppercase tracking-widest mt-2">{stat.label}</p>
                                 </div>
                             </div>
-                            <p className="text-[11px] text-white/30 font-medium mt-3">{stat.desc}</p>
+                            <p className="text-[11px] text-textSec/50 font-bold mt-3 tracking-wide">{stat.desc}</p>
                         </motion.div>
                     ))}
                 </div>
@@ -221,7 +221,7 @@ const Home: React.FC = () => {
                             variants={itemVariants}
                             whileHover={{ scale: 1.005 }}
                             onClick={() => navigate('/graph')}
-                            className="glass-panel p-8 rounded-3xl border border-accentGlow/20 bg-gradient-to-r from-accentGlow/[0.08] via-transparent to-transparent relative overflow-hidden group cursor-pointer"
+                            className="glass-panel p-8 rounded-3xl border border-accentGlow/30 bg-gradient-to-r from-accentGlow/[0.12] via-panelBg/10 to-transparent relative overflow-hidden group cursor-pointer"
                         >
                             <div className="absolute right-0 top-0 h-full w-1/3 opacity-20 group-hover:opacity-40 transition-opacity flex items-center justify-center p-8">
                                 <Layers size={140} className="text-accentGlow/20 blur-sm group-hover:scale-110 transition-transform duration-1000" />
@@ -232,12 +232,12 @@ const Home: React.FC = () => {
                                         <div className="w-2 h-2 rounded-full bg-accentGlow animate-pulse"></div>
                                         <span className="text-[10px] font-bold text-accentGlow uppercase tracking-[0.25em]">Ready to explore</span>
                                     </div>
-                                    <h2 className="text-4xl font-outfit font-bold text-white leading-tight">Document Relationship Map</h2>
+                                    <h2 className="text-4xl font-outfit font-bold text-textMain leading-tight">Document Relationship Map</h2>
                                     <p className="text-textSec text-base font-medium max-w-xl leading-relaxed">
                                         Visualize how your files are connected and find related ideas across your entire library instantly.
                                     </p>
                                 </div>
-                                <button className="flex items-center gap-3 px-8 py-4 bg-white text-darkBg text-sm font-extrabold rounded-xl hover:bg-accentGlow transition-all active:scale-95 shadow-xl whitespace-nowrap">
+                                <button className="flex items-center gap-3 px-8 py-4 bg-textMain text-mainBg text-sm font-extrabold rounded-xl hover:bg-accentGlow transition-all active:scale-95 shadow-xl whitespace-nowrap">
                                     Open Map <ArrowRight size={18} />
                                 </button>
                             </div>
@@ -247,10 +247,10 @@ const Home: React.FC = () => {
                     {/* Activity Section */}
                     <div className="lg:col-span-7 space-y-6">
                         <motion.div variants={itemVariants} className="flex items-center justify-between px-2">
-                            <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                                <History size={20} className="text-white/30" /> Recent Activity
+                            <h3 className="text-2xl font-bold text-textMain flex items-center gap-3">
+                                <History size={20} className="text-textSec/50" /> Recent Activity
                             </h3>
-                            <button onClick={() => navigate('/chat')} className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] hover:text-accentGlow transition-colors">See All</button>
+                            <button onClick={() => navigate('/chat')} className="text-[10px] font-bold text-textSec/50 uppercase tracking-[0.2em] hover:text-accentGlow transition-colors">See All</button>
                         </motion.div>
                         <div className="space-y-4">
                             {history.length > 0 ? (
@@ -259,29 +259,29 @@ const Home: React.FC = () => {
                                         key={item.id}
                                         variants={itemVariants}
                                         onClick={() => navigate(`/chat?q=${encodeURIComponent(item.question)}`)}
-                                        className="glass-panel p-5 rounded-2xl border border-white/5 bg-white/[0.01] hover:bg-white/[0.04] cursor-pointer transition-all flex items-center justify-between group"
+                                        className="glass-panel p-5 rounded-2xl border border-border-color/5 bg-panelBg/10 hover:bg-panelBg/20 cursor-pointer transition-all flex items-center justify-between group"
                                     >
                                         <div className="flex items-center gap-5 flex-1 min-w-0">
-                                            <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center border border-white/5 text-textSec group-hover:text-accentGlow group-hover:border-accentGlow/30 transition-all shadow-inner">
+                                            <div className="w-10 h-10 rounded-xl bg-panelBg/40 flex items-center justify-center border border-border-color/10 text-textSec group-hover:text-accentGlow group-hover:border-accentGlow/30 transition-all shadow-inner">
                                                 <MessageSquare size={18} />
                                             </div>
                                             <div className="truncate">
-                                                <p className="text-base text-white/90 font-bold truncate mb-1">{item.question}</p>
+                                                <p className="text-base text-textMain font-bold truncate mb-1">{item.question}</p>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[10px] font-bold text-textSec uppercase tracking-wider">{formatTimeAgo(item.created_at)}</span>
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-white/10"></div>
+                                                    <span className="text-[10px] font-bold text-textSec/80 uppercase tracking-wider">{formatTimeAgo(item.created_at)}</span>
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-border-color/20"></div>
                                                     <div className="flex items-center gap-1.5">
-                                                        <Star size={10} className={`fill-current ${item.confidence_score > 0.8 ? 'text-accentGlow' : 'text-white/20'}`} />
-                                                        <span className="text-[10px] font-bold text-white/40 uppercase">Accuracy: {Math.round(item.confidence_score * 100)}%</span>
+                                                        <Star size={10} className={`fill-current ${item.confidence_score > 0.8 ? 'text-accentGlow' : 'text-textSec/30'}`} />
+                                                        <span className="text-[10px] font-bold text-textSec/60 uppercase">Accuracy: {Math.round(item.confidence_score * 100)}%</span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <ArrowRight size={16} className="text-white/10 group-hover:text-white group-hover:translate-x-1 transition-all" />
+                                        <ArrowRight size={16} className="text-textSec/30 group-hover:text-textMain group-hover:translate-x-1 transition-all" />
                                     </motion.div>
                                 ))
                             ) : (
-                                <div className="py-16 text-center glass-panel rounded-2xl border border-dashed border-white/10 text-white/10 text-xs font-bold uppercase tracking-widest bg-white/[0.01]">No questions asked yet</div>
+                                <div className="py-16 text-center glass-panel rounded-2xl border border-dashed border-border-color/10 text-textSec/30 text-xs font-bold uppercase tracking-widest bg-panelBg/10">No questions asked yet</div>
                             )}
                         </div>
                     </div>
@@ -289,18 +289,18 @@ const Home: React.FC = () => {
                     {/* Folders Section */}
                     <div className="lg:col-span-5 space-y-6">
                         <motion.div variants={itemVariants} className="flex items-center justify-between px-2">
-                            <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                                <Folder size={20} className="text-white/30" /> Your Folders
+                            <h3 className="text-2xl font-bold text-textMain flex items-center gap-3">
+                                <Folder size={20} className="text-textSec/50" /> Your Folders
                             </h3>
-                            <button onClick={() => navigate('/chat')} className="text-[10px] font-bold text-white/30 uppercase tracking-[0.2em] hover:text-accentGlow transition-colors">New</button>
+                            <button onClick={() => navigate('/chat')} className="text-[10px] font-bold text-textSec/50 uppercase tracking-[0.2em] hover:text-accentGlow transition-colors">New</button>
                         </motion.div>
                         <div className="grid grid-cols-1 gap-4">
                             {folders.length > 0 ? (
                                 folders.map((folder) => (
                                     <motion.div
                                         key={folder.id}
-                                        whileHover={{ backgroundColor: 'rgba(255,255,255,0.04)', x: 4 }}
-                                        className="glass-panel p-5 rounded-2xl border border-white/5 bg-[#0e0e11] hover:border-white/10 transition-all flex items-center justify-between group cursor-pointer shadow-lg"
+                                        whileHover={{ backgroundColor: 'rgba(var(--panel-bg), 0.4)', x: 4 }}
+                                        className="glass-panel p-5 rounded-2xl border border-border-color/10 bg-panelBg/20 hover:border-border-color/20 transition-all flex items-center justify-between group cursor-pointer shadow-lg"
                                         onClick={() => navigate(`/chat`)}
                                     >
                                         <div className="flex items-center gap-4">
@@ -308,22 +308,22 @@ const Home: React.FC = () => {
                                                 <Folder size={20} className="text-accentGlow" />
                                             </div>
                                             <div className="min-w-0">
-                                                <h4 className="text-white/90 font-extrabold text-sm truncate">{folder.name}</h4>
-                                                <p className="text-[10px] text-textSec font-bold uppercase tracking-wider mt-1">Updated {formatTimeAgo(folder.created_at)}</p>
+                                                <h4 className="text-textMain font-extrabold text-sm truncate">{folder.name}</h4>
+                                                <p className="text-[10px] text-textSec/80 font-bold uppercase tracking-wider mt-1">Updated {formatTimeAgo(folder.created_at)}</p>
                                             </div>
                                         </div>
-                                        <Plus size={16} className="text-white/10 group-hover:text-accentGlow transition-transform group-hover:rotate-90 duration-300" />
+                                        <Plus size={16} className="text-textSec/30 group-hover:text-accentGlow transition-transform group-hover:rotate-90 duration-300" />
                                     </motion.div>
                                 ))
                             ) : (
-                                <div className="p-16 text-center glass-panel rounded-2xl border border-dashed border-white/10 text-white/10 text-xs font-bold uppercase tracking-widest leading-relaxed bg-white/[0.01]">Ready to add files</div>
+                                <div className="p-16 text-center glass-panel rounded-2xl border border-dashed border-border-color/10 text-textSec/30 text-xs font-bold uppercase tracking-widest leading-relaxed bg-panelBg/10">Ready to add files</div>
                             )}
                         </div>
                     </div>
                 </div>
 
                 {/* Bottom Shortcuts */}
-                <motion.div variants={itemVariants} className="pt-8 flex flex-wrap gap-10 border-t border-white/5">
+                <motion.div variants={itemVariants} className="pt-8 flex flex-wrap gap-10 border-t border-border-color/10">
                     {[
                         { label: 'Add Documents', to: '/knowledge', icon: <Plus size={14} /> },
                         { label: 'Intelligence Map', to: '/graph', icon: <Share2 size={14} /> },
@@ -332,7 +332,7 @@ const Home: React.FC = () => {
                         <button 
                             key={i} 
                             onClick={() => navigate(link.to as any)}
-                            className="flex items-center gap-3 text-[11px] font-extrabold text-white/30 uppercase tracking-[0.2em] hover:text-white transition-all group"
+                            className="flex items-center gap-3 text-[11px] font-extrabold text-textSec/50 uppercase tracking-[0.2em] hover:text-textMain transition-all group"
                         >
                             <span className="group-hover:text-accentGlow transition-colors">{link.icon}</span> {link.label}
                         </button>

@@ -10,15 +10,16 @@ export default {
   theme: {
     extend: {
       colors: {
-        darkBg: '#050508',
-        panelBg: '#0a0a0f',
-        accentGlow: '#00f0ff',
-        accentSec: '#0050ff',
-        danger: '#ff4d4d',
-        success: '#00ff88',
-        warning: '#ffaa00',
-        textMain: '#f0f0f5',
-        textSec: '#9ba1b0',
+        darkBg: 'rgb(var(--dark-bg) / <alpha-value>)',
+        panelBg: 'rgb(var(--panel-bg) / <alpha-value>)',
+        accentGlow: 'rgb(var(--accent-glow) / <alpha-value>)',
+        accentSec: 'rgb(var(--accent-sec) / <alpha-value>)',
+        danger: 'rgb(var(--danger) / <alpha-value>)',
+        success: 'rgb(var(--success) / <alpha-value>)',
+        warning: 'rgb(var(--warning) / <alpha-value>)',
+        textMain: 'rgb(var(--text-main) / <alpha-value>)',
+        textSec: 'rgb(var(--text-sec) / <alpha-value>)',
+        'border-color': 'rgb(var(--border-color) / <alpha-value>)',
       },
       fontFamily: {
         inter: ['Inter', 'sans-serif'],
@@ -31,6 +32,9 @@ export default {
       boxShadow: {
         'glow': '0 0 15px rgba(0, 240, 255, 0.4)',
         'glow-success': '0 0 15px rgba(0, 255, 136, 0.4)',
+      },
+      borderColor: {
+        DEFAULT: 'rgb(var(--border-color) / <alpha-value>)',
       },
       typography: {
         invert: {

@@ -31,6 +31,7 @@ import { useWebSocket } from '../context/WebSocketContext';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
 import { useVideoCall } from '../context/VideoCallContext';
+import { useTheme } from '../context/ThemeContext';
 
 
 
@@ -53,14 +54,13 @@ const Chat: React.FC = () => {
         localMessages, 
         loading: queryLoading, 
         streaming,
-        provider, 
-        setProvider, 
         sendQuery, 
         giveFeedback,
         saveAnnotation,
         selectedFolderId,
         setSelectedFolderId
     } = useChat();
+    const { theme } = useTheme();
 
     const isBusy = queryLoading || streaming;
 
@@ -231,7 +231,7 @@ const Chat: React.FC = () => {
         setInput('');
 
         if (isMultiplayer) {
-            sendWsMessage(question, provider);
+            sendWsMessage(question);
         } else {
             sendQuery(question);
         }
@@ -263,9 +263,9 @@ const Chat: React.FC = () => {
 
     return (
         <div className="flex-1 flex flex-row h-screen p-4 lg:p-6 overflow-hidden max-w-full">
-            <div className="glass-panel flex-1 flex flex-col h-full overflow-hidden shadow-2xl relative z-10 w-full">
+            <div className="glass-panel flex-1 flex flex-col h-full overflow-hidden shadow-2xl relative z-10 w-full bg-panelBg">
                 {/* Chat Header */}
-                <div className="px-4 md:px-6 py-4 border-b border-white/10 flex justify-between items-center bg-black/20 backdrop-blur-md z-20 shrink-0">
+                <div className="px-4 md:px-6 py-4 border-b border-border-color flex justify-between items-center bg-panelBg/20 backdrop-blur-md z-20 shrink-0">
                     <div className="flex items-center gap-3">
                         <div className="w-2.5 h-2.5 rounded-full bg-success shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse"></div>
                         <h3 className="text-sm md:text-lg font-outfit font-semibold flex items-center gap-2 text-textMain truncate">
@@ -288,7 +288,7 @@ const Chat: React.FC = () => {
                                     className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
                                         selectedFolderId 
                                         ? 'bg-accentGlow/10 border-accentGlow/30 text-accentGlow shadow-glow' 
-                                        : 'bg-white/5 border-white/5 text-textSec hover:border-white/10'
+                                        : 'bg-panelBg/20 border-border-color/10 text-textSec hover:border-border-color/20'
                                     }`}
                                 >
                                     <FolderIcon size={14} />
@@ -299,7 +299,7 @@ const Chat: React.FC = () => {
                                 {showFolderSelector && (
                                     <>
                                         <div className="fixed inset-0 z-20" onClick={() => setShowFolderSelector(false)}></div>
-                                        <div className="absolute right-0 top-10 z-30 bg-panelBg border border-white/10 rounded-xl shadow-2xl p-2 min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="absolute right-0 top-10 z-30 bg-panelBg border border-border-color rounded-xl shadow-2xl p-2 min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
                                             <div className="text-[0.6rem] uppercase tracking-widest text-textSec/60 mb-2 px-3 pt-1">Target Knowledge Source</div>
                                             <button
                                                 onClick={() => {
@@ -309,7 +309,7 @@ const Chat: React.FC = () => {
                                                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                                                     selectedFolderId === null 
                                                     ? 'bg-accentGlow/10 text-accentGlow' 
-                                                    : 'text-textSec hover:bg-white/5 hover:text-textMain'
+                                                    : 'text-textSec hover:bg-panelBg/30 hover:text-textMain'
                                                 }`}
                                             >
                                                 Whole Knowledge Base
@@ -324,7 +324,7 @@ const Chat: React.FC = () => {
                                                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                                                         selectedFolderId === folder.id 
                                                         ? 'bg-accentGlow/10 text-accentGlow' 
-                                                        : 'text-textSec hover:bg-white/5 hover:text-textMain'
+                                                        : 'text-textSec hover:bg-panelBg/30 hover:text-textMain'
                                                     }`}
                                                 >
                                                     {folder.name}
@@ -336,31 +336,14 @@ const Chat: React.FC = () => {
                             </div>
                         )}
 
-                        <div className="flex items-center gap-1 sm:gap-2 bg-black/40 p-1 rounded-xl border border-white/5 shadow-inner">
-                            <button
-                                onClick={() => setProvider('openai')}
-                                className={`px-2 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all duration-300 ${provider === 'openai' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-textMain hover:bg-white/5'}`}
-                                title="OpenAI"
-                            >
-                                <span className="sm:inline">OPENAI</span>
-                                <span className="sm:hidden text-lg leading-none">AI</span>
-                            </button>
-                            <button
-                                onClick={() => setProvider('gemini')}
-                                className={`px-2 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-bold transition-all duration-300 ${provider === 'gemini' ? 'bg-accent-gradient text-white shadow-glow' : 'text-textSec hover:text-textMain hover:bg-white/5'} mr-1`}
-                                title="Gemini"
-                            >
-                                <span className="sm:inline">GEMINI</span>
-                                <span className="sm:hidden text-lg leading-none">G</span>
-                            </button>
-
+                        <div className="flex items-center gap-2">
                             {!isMultiplayer && (
                                 <button
                                     onClick={handleOpenRoomModal}
                                     title="Invite Friends"
-                                    className="flex items-center gap-1.5 px-2 md:px-3 py-1.5 rounded-lg text-[10px] md:text-xs font-semibold bg-accentSec/10 text-accentSec border border-accentSec/20 hover:bg-accentSec/20 hover:border-accentSec/40 transition-all duration-300 ml-1"
+                                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-accentSec/10 text-accentSec border border-accentSec/20 hover:bg-accentSec/20 hover:border-accentSec/40 transition-all duration-300 shadow-sm"
                                 >
-                                    <Users size={14} /> <span className="hidden md:inline">Invite Friends</span>
+                                    <Users size={16} /> <span className="hidden md:inline">Invite Friends</span>
                                 </button>
                             )}
                         </div>
@@ -438,7 +421,7 @@ const Chat: React.FC = () => {
                                         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
                                         className="flex justify-center w-full my-2"
                                     >
-                                        <div className="bg-white/5 backdrop-blur-sm px-4 py-1.5 rounded-full text-xs font-medium text-textSec border border-white/10 shadow-sm">
+                                        <div className="bg-panelBg/50 backdrop-blur-sm px-4 py-1.5 rounded-full text-xs font-medium text-textSec border border-border-color shadow-sm">
                                             {content}
                                         </div>
                                     </motion.div>
@@ -459,12 +442,12 @@ const Chat: React.FC = () => {
                                     )}
 
                                     <div className={`flex gap-3 md:gap-4 ${isRightSide ? 'flex-row-reverse' : 'flex-row'}`}>
-                                        <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center shadow-md ${isAi ? 'bg-accentGlow/10 border border-accentGlow/30' : 'bg-white/5 border border-white/10'}`}>
+                                        <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center shadow-md ${isAi ? 'bg-accentGlow/10 border border-accentGlow/30' : 'bg-panelBg border border-border-color'}`}>
                                             {isAi ? <Sparkles size={20} className="text-accentGlow drop-shadow-glow" /> : <UserIcon size={20} className="text-textMain/80" />}
                                         </div>
 
-                                        <div className={`group relative p-5 rounded-2xl border ${isRightSide ? 'bg-accentSec/10 border-accentSec/30 rounded-tr-sm backdrop-blur-md' : 'bg-black/40 border-white/10 rounded-tl-sm backdrop-blur-md hover:border-white/20 transition-colors'}`}>
-                                            <div className="markdown-content text-[0.95rem] text-textMain/90 leading-relaxed">
+                                        <div className={`group relative p-5 rounded-2xl border ${isRightSide ? 'bg-accentSec/10 border-accentSec/30 rounded-tr-sm backdrop-blur-md' : 'bg-panelBg border-border-color rounded-tl-sm backdrop-blur-md hover:border-border-color/50 transition-colors'}`}>
+                                            <div className={`markdown-content text-[0.95rem] text-textMain/90 leading-relaxed prose ${theme === 'dark' ? 'prose-invert' : ''} max-w-none`}>
                                                 <ReactMarkdown
                                                     components={{
                                                         p: ({ children }) => <span className="block mb-4 last:mb-0">{children}</span>,
@@ -488,14 +471,14 @@ const Chat: React.FC = () => {
                                             </div>
 
                                             {(msg as any).sources && (msg as any).sources.length > 0 && (
-                                                <details className="mt-5 border-t border-white/10 pt-4 cursor-pointer group/details">
+                                                <details className="mt-5 border-t border-border-color pt-4 cursor-pointer group/details">
                                                     <summary className="list-none text-xs text-accentGlow font-bold flex items-center gap-2 uppercase tracking-wider select-none hover:text-accentGlow/80 transition-colors">
                                                         <ChevronRight size={14} className="transition-transform group-open/details:rotate-90" />
                                                         Sources Cited ({(msg as any).sources.length})
                                                     </summary>
                                                     <div className="flex flex-col gap-3 mt-4">
                                                         {(msg as any).sources.map((src: any, j: number) => (
-                                                            <div key={j} className="bg-black/50 p-3.5 border-l-2 border-accentGlow rounded-r-lg text-sm border-t border-b border-r border-white/5 hover:bg-black/70 transition-colors">
+                                                            <div key={j} className="bg-panelBg/50 p-3.5 border-l-2 border-accentGlow rounded-r-lg text-sm border-t border-b border-r border-border-color hover:bg-panelBg/70 transition-colors">
                                                                 <div className="flex justify-between items-center mb-2">
                                                                     <strong className="flex items-center gap-2 text-textMain/80 shrink-0 min-w-0 pr-2">
                                                                         <FileText size={14} className="shrink-0 text-textSec" />
@@ -505,7 +488,7 @@ const Chat: React.FC = () => {
                                                                         {Math.round(src.relevance_score * 100)}% Match
                                                                     </span>
                                                                 </div>
-                                                                <div className="text-textSec/90 italic text-[0.85rem] leading-relaxed border-t border-white/5 pt-2 mt-1">
+                                                                <div className="text-textSec/90 italic text-[0.85rem] leading-relaxed border-t border-border-color/5 pt-2 mt-1">
                                                                     "{src.chunk_excerpt}"
                                                                 </div>
                                                             </div>
@@ -516,7 +499,7 @@ const Chat: React.FC = () => {
 
                                             {/* Confidence & Feedback Bar */}
                                             {isAi && msg.query_id && (
-                                                <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between">
+                                                <div className="mt-4 pt-3 border-t border-border-color/10 flex items-center justify-between">
                                                     <div className="flex items-center gap-3">
                                                         {msg.confidence_score !== undefined && (
                                                             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[0.7rem] font-bold border transition-all ${
@@ -582,7 +565,7 @@ const Chat: React.FC = () => {
                                                 <>
                                                     {/* Saved annotation display */}
                                                     {(msg as any).user_annotation && annotatingIndex !== i && (
-                                                        <div className="mt-3 pt-3 border-t border-white/5">
+                                                        <div className="mt-3 pt-3 border-t border-border-color">
                                                             <div className="flex items-start gap-2 bg-accentGlow/5 border border-accentGlow/15 rounded-xl p-3">
                                                                 <PenLine size={13} className="text-accentGlow shrink-0 mt-0.5" />
                                                                 <p className="text-xs text-textMain/80 leading-relaxed italic">{(msg as any).user_annotation}</p>
@@ -597,7 +580,7 @@ const Chat: React.FC = () => {
                                                                 initial={{ opacity: 0, height: 0 }}
                                                                 animate={{ opacity: 1, height: 'auto' }}
                                                                 exit={{ opacity: 0, height: 0 }}
-                                                                className="mt-3 pt-3 border-t border-white/5 overflow-hidden"
+                                                                className="mt-3 pt-3 border-t border-border-color overflow-hidden"
                                                             >
                                                                 <div className="flex items-center gap-1.5 mb-2 text-xs font-bold text-accentGlow">
                                                                     <MessageSquarePlus size={13} />
@@ -608,12 +591,12 @@ const Chat: React.FC = () => {
                                                                     value={annotationDraft}
                                                                     onChange={e => setAnnotationDraft(e.target.value)}
                                                                     placeholder="Add your interpretation, memory hook, or study note here..."
-                                                                    className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-textMain placeholder:text-textSec/40 outline-none focus:border-accentGlow/40 transition-colors resize-none min-h-[80px] font-medium"
+                                                                    className="w-full bg-panelBg/30 border border-border-color rounded-xl px-3 py-2.5 text-sm text-textMain placeholder:text-textSec/40 outline-none focus:border-accentGlow/40 transition-colors resize-none min-h-[80px] font-medium"
                                                                 />
                                                                 <div className="flex gap-2 mt-2 justify-end">
                                                                     <button
                                                                         onClick={() => setAnnotatingIndex(null)}
-                                                                        className="px-3 py-1.5 text-xs font-semibold text-textSec hover:text-white transition-colors"
+                                                                        className="px-3 py-1.5 text-xs font-semibold text-textSec hover:text-textMain transition-colors"
                                                                     >
                                                                         Cancel
                                                                     </button>
@@ -645,7 +628,7 @@ const Chat: React.FC = () => {
                                                     transition={{ delay: qi * 0.08 }}
                                                     onClick={() => handleFollowupClick(q)}
                                                     disabled={isBusy}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 border border-white/10 text-textSec hover:bg-accentGlow/10 hover:border-accentGlow/30 hover:text-accentGlow rounded-xl text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed group/chip"
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-panelBg border border-border-color text-textSec hover:bg-accentGlow/10 hover:border-accentGlow/30 hover:text-accentGlow rounded-xl text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed group/chip"
                                                 >
                                                     <Sparkles size={11} className="opacity-50 group-hover/chip:opacity-100 text-accentGlow" />
                                                     {q}
@@ -663,7 +646,7 @@ const Chat: React.FC = () => {
                             <div className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center bg-accentGlow/10 border border-accentGlow/30 shadow-glow">
                                 <Loader2 size={20} className="text-accentGlow animate-spin" />
                             </div>
-                            <div className="bg-black/40 p-4 rounded-2xl rounded-tl-sm border border-white/10 flex items-center gap-3 backdrop-blur-md">
+                            <div className="bg-panelBg p-4 rounded-2xl rounded-tl-sm border border-border-color flex items-center gap-3 backdrop-blur-md">
                                 <span className="text-sm font-medium text-textSec animate-pulse">Agent is researching knowledge base...</span>
                             </div>
                         </div>
@@ -673,10 +656,10 @@ const Chat: React.FC = () => {
                 </div>
 
                 {/* Chat Input Area */}
-                <div className="p-4 md:p-6 border-t border-white/10 bg-black/20 backdrop-blur-xl shrink-0 z-20">
+                <div className="p-4 md:p-6 border-t border-border-color bg-panelBg/20 backdrop-blur-xl shrink-0 z-20">
                     <form onSubmit={handleSend} className="max-w-[1000px] mx-auto relative group">
                         <div className="absolute -inset-1 bg-accent-gradient rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                        <div className="relative flex gap-3 items-end bg-panelBg rounded-xl p-2 border border-white/10 focus-within:border-accentGlow/50 transition-colors shadow-lg">
+                        <div className="relative flex gap-3 items-end bg-panelBg rounded-xl p-2 border border-border-color focus-within:border-accentGlow/50 transition-colors shadow-lg">
                             <textarea
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
@@ -709,13 +692,13 @@ const Chat: React.FC = () => {
                         initial={{ x: '100%', opacity: 0 }}
                         animate={{ x: 0, opacity: 1 }}
                         exit={{ x: '100%', opacity: 0 }}
-                        className="glass-panel fixed md:relative right-0 top-0 bottom-0 z-[100] md:z-20 w-[min(90vw,340px)] md:w-[340px] flex flex-col overflow-hidden shadow-2xl md:ml-6 border-l border-white/10"
+                        className="glass-panel fixed md:relative right-0 top-0 bottom-0 z-[100] md:z-20 w-[min(90vw,340px)] md:w-[340px] flex flex-col overflow-hidden shadow-2xl md:ml-6 border-l border-border-color bg-panelBg"
                     >
                         {/* Overlay for mobile */}
                         <div className="md:hidden fixed inset-0 bg-black/60 backdrop-blur-sm -z-10" onClick={() => setShowVault(false)}></div>
                         <div className="absolute top-0 right-0 w-48 h-48 bg-purple-500/10 rounded-full blur-[60px] -z-10 pointer-events-none"></div>
 
-                        <div className="p-5 border-b border-white/10 bg-black/20 backdrop-blur-md">
+                        <div className="p-5 border-b border-border-color bg-panelBg/20 backdrop-blur-md">
                             <h3 className="text-lg font-outfit font-bold text-purple-400 flex items-center gap-2 drop-shadow-[0_0_8px_rgba(168,85,247,0.4)]">
                                 <FileBox size={20} /> Shared Vault
                             </h3>
@@ -725,7 +708,7 @@ const Chat: React.FC = () => {
                         </div>
                         <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 custom-scrollbar relative z-10">
                             {myDocuments.length === 0 ? (
-                                <div className="text-center text-textSec text-sm mt-10 p-6 border border-white/5 rounded-2xl bg-black/20 flex flex-col items-center">
+                                <div className="text-center text-textSec text-sm mt-10 p-6 border border-border-color rounded-2xl bg-panelBg/20 flex flex-col items-center">
                                     <FileText size={32} className="mb-3 opacity-30" />
                                     Your personal Knowledge Base is empty. Upload files in the Knowledge Base tab first.
                                 </div>
@@ -733,7 +716,7 @@ const Chat: React.FC = () => {
                                 myDocuments.map(doc => {
                                     const isAdded = roomDocuments.some(rd => rd.document_id === doc.document_id);
                                     return (
-                                        <div key={doc.document_id} className={`p-4 rounded-xl border transition-all duration-300 flex flex-col gap-3 ${isAdded ? 'bg-purple-500/10 border-purple-500/30' : 'bg-black/30 border-white/5 hover:border-white/20'}`}>
+                                        <div key={doc.document_id} className={`p-4 rounded-xl border transition-all duration-300 flex flex-col gap-3 ${isAdded ? 'bg-purple-500/10 border-purple-500/30' : 'bg-panelBg border-border-color hover:border-border-color/50'}`}>
                                             <div className="text-sm font-semibold text-white/90 break-words leading-tight flex items-start gap-2">
                                                 <FileText size={16} className={`shrink-0 mt-0.5 ${isAdded ? 'text-purple-400' : 'text-textSec'}`} />
                                                 <span>{doc.filename}</span>
@@ -780,7 +763,7 @@ const Chat: React.FC = () => {
                         >
                             <div className="absolute top-0 right-0 w-48 h-48 bg-accentSec/10 rounded-full blur-[50px] -z-10"></div>
 
-                            <h3 className="text-2xl font-outfit font-bold text-white flex items-center gap-3">
+                            <h3 className="text-2xl font-outfit font-bold text-textMain flex items-center gap-3">
                                 <Users size={28} className="text-accentSec drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
                                 Create Room
                             </h3>
@@ -796,14 +779,14 @@ const Chat: React.FC = () => {
                                         placeholder="e.g. Project Phoenix"
                                         value={newRoomName}
                                         onChange={(e) => setNewRoomName(e.target.value)}
-                                        className="w-full bg-black/40 border border-white/10 px-4 py-3.5 rounded-xl text-white text-[0.95rem] outline-none focus:border-accentSec/50 focus:ring-4 focus:ring-accentSec/10 transition-all placeholder:text-white/20"
+                                        className="w-full bg-panelBg border border-border-color px-4 py-3.5 rounded-xl text-textMain text-[0.95rem] outline-none focus:border-accentSec/50 focus:ring-4 focus:ring-accentSec/10 transition-all placeholder:text-textMain/20"
                                     />
                                 </div>
-                                <div className="flex gap-3 justify-end pt-2 border-t border-white/10 mt-2">
+                                <div className="flex gap-3 justify-end pt-2 border-t border-border-color/10 mt-2">
                                     <button
                                         type="button"
                                         onClick={() => setShowRoomModal(false)}
-                                        className="px-5 py-2.5 rounded-xl bg-transparent border border-white/10 text-textSec hover:text-white hover:bg-white/5 font-semibold text-sm transition-colors"
+                                        className="px-5 py-2.5 rounded-xl bg-transparent border border-border-color text-textSec hover:text-textMain hover:bg-panelBg/10 font-semibold text-sm transition-colors"
                                     >
                                         Cancel
                                     </button>

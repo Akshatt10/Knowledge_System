@@ -15,6 +15,7 @@ import UserManagement from './pages/UserManagement';
 import { WebSocketProvider } from './context/WebSocketContext';
 import { ChatProvider } from './context/ChatContext';
 import { VideoCallProvider } from './context/VideoCallContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Menu } from 'lucide-react';
 
 const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -49,12 +50,13 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <WebSocketProvider>
-        <ChatProvider>
-          <VideoCallProvider>
-          <BrowserRouter>
-            <Routes>
+    <ThemeProvider>
+      <AuthProvider>
+        <WebSocketProvider>
+          <ChatProvider>
+            <VideoCallProvider>
+            <BrowserRouter>
+              <Routes>
             {/* Public Routes */}
             <Route path="/login" element={<Login />} />
 
@@ -126,13 +128,13 @@ const App: React.FC = () => {
 
             {/* Default Redirects */}
             <Route path="/" element={<Navigate to="/home" replace />} />
-            <Route path="*" element={<Navigate to="/home" replace />} />
-          </Routes>
+            </Routes>
           </BrowserRouter>
           </VideoCallProvider>
         </ChatProvider>
       </WebSocketProvider>
     </AuthProvider>
+    </ThemeProvider>
   );
 };
 

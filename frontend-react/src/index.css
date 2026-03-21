@@ -5,20 +5,49 @@
 @tailwind utilities;
 
 :root {
-  --dark-bg: #050508;
-  --panel-bg: rgba(10, 10, 15, 0.7);
-  --text-main: #f0f0f5;
-  --text-sec: #9ba1b0;
-  --accent-glow: #00f0ff;
-  --border-color: rgba(255, 255, 255, 0.1);
-  --glass-bg: rgba(10, 10, 15, 0.7);
+  /* Deep Space (Dark) - Default */
+  --dark-bg: 5 5 8;
+  --panel-bg: 10 10 15;
+  --panel-bg-opacity: 0.75;
+  --text-main: 240 240 245;
+  --text-sec: 155 161 176;
+  --accent-glow: 0 240 255;
+  --accent-sec: 0 80 255;
+  --border-color: 255 255 255;
+  --border-opacity: 0.1;
+  --glass-bg: 10 10 15;
+  --glass-opacity: 0.7;
+  --danger: 255 77 77;
+  --success: 0 255 136;
+  --warning: 255 170 0;
+  --app-radial: radial-gradient(circle at 0% 0%, rgba(0, 240, 255, 0.05) 0%, transparent 40%), radial-gradient(circle at 100% 100%, rgba(0, 80, 255, 0.05) 0%, transparent 40%);
+}
+
+.light {
+  /* Lively Aura (Light/Refreshing) */
+  --dark-bg: 248 250 252;
+  --panel-bg: 255 255 255;
+  --panel-bg-opacity: 0.85;
+  --text-main: 15 23 42;
+  --text-sec: 71 85 105;
+  --accent-glow: 99 102 241;
+  --accent-sec: 79 70 229;
+  --border-color: 0 0 0;
+  --border-opacity: 0.08;
+  --glass-bg: 255 255 255;
+  --glass-opacity: 0.7;
+  --danger: 239 68 68;
+  --success: 16 185 129;
+  --warning: 245 158 11;
+  --app-radial: radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.08) 0%, transparent 50%), radial-gradient(circle at 100% 100%, rgba(79, 70, 229, 0.08) 0%, transparent 50%);
 }
 
 @layer base {
   body {
-    @apply bg-darkBg text-textMain font-inter overflow-hidden h-screen;
-    background-color: var(--dark-bg);
-    color: var(--text-main);
+    @apply bg-darkBg text-textMain font-inter overflow-hidden h-screen transition-colors duration-500;
+    background-color: rgb(var(--dark-bg));
+    background-image: var(--app-radial);
+    color: rgb(var(--text-main));
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -26,7 +55,7 @@
 
 @layer utilities {
   .glass-panel {
-    @apply bg-panelBg/70 backdrop-blur-[20px] border border-white/10 rounded-2xl;
+    @apply bg-panelBg/70 backdrop-blur-[20px] border border-border-color/10 rounded-2xl;
   }
 
   /* Custom Scrollbar */
@@ -38,10 +67,10 @@
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    @apply bg-white/10 rounded-full;
+    @apply bg-textSec/10 rounded-full;
   }
   ::-webkit-scrollbar-thumb:hover {
-    @apply bg-white/20;
+    @apply bg-textSec/20;
   }
 }
 
