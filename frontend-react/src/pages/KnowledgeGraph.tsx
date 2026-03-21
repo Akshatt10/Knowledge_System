@@ -201,22 +201,24 @@ const KnowledgeGraph: React.FC = () => {
                 nodeRelSize={10}
                 nodeCanvasObject={(node: any, ctx, globalScale) => {
                     const label = node.label;
-                    const fontSize = 16 / globalScale;
-                    ctx.font = `${fontSize}px "Inter", sans-serif`;
-                    const textWidth = ctx.measureText(label).width;
-
+                    
+                    // 1. Adaptive Sizing: Boost node size slightly when zoomed out so they don't disappear
+                    // Scale factor: when globalScale is 1.0, factor is 1. When globalScale is 0.1, factor is ~2.
+                    const adaptiveScale = 1 + (1 / Math.max(0.2, globalScale)) * 0.15;
+                    
                     const isHighlighted = highlightNodes.size === 0 || highlightNodes.has(node.id);
                     const isFocus = highlightNodes.has(node.id);
                     
                     // Node Color & Size
                     const baseColor = node.type === 'folder' ? '#3B82F6' : (node.type === 'document' ? '#10B981' : '#F59E0B');
                     const color = isHighlighted ? baseColor : `${baseColor}33`;
-                    const baseSize = node.type === 'folder' ? 12 : 9;
+                    
+                    const baseSize = (node.type === 'folder' ? 12 : 9) * adaptiveScale;
                     const size = isFocus ? baseSize * 1.3 : baseSize;
                     
-                    // Draw outer glow
+                    // Draw outer glow (more prominent when focused or zoomed out)
                     ctx.beginPath();
-                    ctx.arc(node.x!, node.y!, size + 8, 0, 2 * Math.PI, false);
+                    ctx.arc(node.x!, node.y!, size + (isFocus ? 12 : 8), 0, 2 * Math.PI, false);
                     ctx.fillStyle = isFocus ? `${baseColor}55` : (isHighlighted ? `${baseColor}22` : 'transparent');
                     ctx.fill();
 
@@ -233,22 +235,40 @@ const KnowledgeGraph: React.FC = () => {
                         ctx.fill();
                     }
 
-                    // Node Label
-                    if (isFocus || (isHighlighted && (globalScale > 0.6 || node.type === 'folder'))) {
-                        const labelOffset = size + 16;
+                    // 2. Adaptive Labels: Show labels based on a lower threshold (0.4) or for highlighted nodes
+                    const showLabel = isFocus || (isHighlighted && (globalScale > 0.4 || node.type === 'folder'));
+                    
+                    if (showLabel) {
+                        // Keep font size legible but relative to zoom
+                        const fontSize = Math.max(4, 16 / Math.pow(globalScale, 0.5)); 
+                        ctx.font = `${fontSize}px "Inter", sans-serif`;
+                        const textWidth = ctx.measureText(label).width;
+                        const labelOffset = size + (fontSize * 0.8) + 4;
+                        
                         ctx.textAlign = 'center';
                         ctx.textBaseline = 'middle';
                         
-                        ctx.fillStyle = 'rgba(11, 15, 26, 0.9)';
-                        ctx.fillRect(node.x! - textWidth/2 - 8, node.y! + labelOffset - fontSize/2 - 4, textWidth + 16, fontSize + 8);
+                        // Background box with better contrast
+                        ctx.fillStyle = 'rgba(11, 15, 26, 0.85)';
+                        ctx.fillRect(
+                            node.x! - textWidth/2 - 6, 
+                            node.y! + labelOffset - fontSize/2 - 3, 
+                            textWidth + 12, 
+                            fontSize + 6
+                        );
 
-                        ctx.fillStyle = isFocus ? '#FFFFFF' : 'rgba(255, 255, 255, 0.95)';
+                        ctx.fillStyle = isFocus ? '#FFFFFF' : 'rgba(255, 255, 255, 0.9)';
                         ctx.fillText(label, node.x!, node.y! + labelOffset);
                         
                         if (isFocus) {
                             ctx.strokeStyle = baseColor;
                             ctx.lineWidth = 2 / globalScale;
-                            ctx.strokeRect(node.x! - textWidth/2 - 8, node.y! + labelOffset - fontSize/2 - 4, textWidth + 16, fontSize + 8);
+                            ctx.strokeRect(
+                                node.x! - textWidth/2 - 6, 
+                                node.y! + labelOffset - fontSize/2 - 3, 
+                                textWidth + 12, 
+                                fontSize + 6
+                            );
                         }
                     }
                 }}

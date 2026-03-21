@@ -14,8 +14,11 @@ import {
     Plug,
     Network,
     FlaskConical,
+    Sun,
+    Moon,
     X
 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 import { roomService } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -26,6 +29,7 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     const { user, logout, isAdmin, token } = useAuth();
+    const { theme, toggleTheme } = useTheme();
     const navigate = useNavigate();
     const [rooms, setRooms] = React.useState<any[]>([]);
 
@@ -187,13 +191,22 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                         </div>
                     </div>
                 </div>
-                <button
-                    onClick={handleLogout}
-                    title="Logout"
-                    className="p-2.5 rounded-xl text-textSec hover:text-danger hover:bg-danger/10 transition-all duration-300 group"
-                >
-                    <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={toggleTheme}
+                        title={`Switch to ${theme === 'dark' ? 'Light' : 'Dark'} Mode`}
+                        className="p-2.5 rounded-xl text-textSec hover:text-accentGlow hover:bg-accentGlow/10 transition-all duration-300"
+                    >
+                        {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                    </button>
+                    <button
+                        onClick={handleLogout}
+                        title="Logout"
+                        className="p-2.5 rounded-xl text-textSec hover:text-danger hover:bg-danger/10 transition-all duration-300 group"
+                    >
+                        <LogOut size={20} className="group-hover:-translate-x-1 transition-transform" />
+                    </button>
+                </div>
             </div>
         </aside>
     );

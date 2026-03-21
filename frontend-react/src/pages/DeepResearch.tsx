@@ -18,14 +18,15 @@ import ReactMarkdown from 'react-markdown';
 import { documentService, folderService, queryService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useChat } from '../context/ChatContext';
+import { useTheme } from '../context/ThemeContext';
 
 const DeepResearch: React.FC = () => {
     const {} = useAuth();
     const { 
-        provider, 
         selectedFolderId,
         setSelectedFolderId
     } = useChat();
+    const { theme } = useTheme();
 
     const [folders, setFolders] = useState<any[]>([]);
     const [showFolderSelector, setShowFolderSelector] = useState(false);
@@ -113,7 +114,6 @@ const DeepResearch: React.FC = () => {
             const res = await queryService.batchResearch({
                 questions: researchTasks,
                 folder_id: selectedFolderId,
-                provider,
             });
             setBatchReport(res.data);
             
@@ -178,7 +178,6 @@ const DeepResearch: React.FC = () => {
             const res = await queryService.deepResearchReport({
                 prompt: reportPrompt.trim(),
                 folder_id: selectedFolderId,
-                provider,
             });
             setReportResult(res.data);
 
@@ -225,7 +224,7 @@ const DeepResearch: React.FC = () => {
     const handleExtractChecklist = async (documentId: string) => {
         setExtractingId(documentId);
         try {
-            const res = await queryService.extractChecklist({ document_id: documentId, provider });
+            const res = await queryService.extractChecklist({ document_id: documentId });
             if (res.data && res.data.length > 0) {
                 setResearchTasks(res.data);
             } else {
@@ -268,16 +267,16 @@ const DeepResearch: React.FC = () => {
                                 setShowOnboarding(false);
                                 localStorage.setItem('nexus_deep_research_onboarded', 'true');
                             }}
-                            className="absolute top-3 right-3 p-1.5 hover:bg-white/10 rounded-lg text-textSec hover:text-white transition-colors"
+                            className="absolute top-3 right-3 p-1.5 hover:bg-textMain/10 rounded-lg text-textSec hover:text-textMain transition-colors"
                         >
                             <X size={16} />
                         </button>
-                        <h3 className="text-base font-outfit font-bold text-white mb-2 flex items-center gap-2">
+                        <h3 className="text-base font-outfit font-bold text-textMain mb-2 flex items-center gap-2">
                             <Sparkles size={18} className="text-accentGlow" />
                             Welcome to Deep Research
                         </h3>
                         <p className="text-sm text-textSec leading-relaxed max-w-3xl">
-                            This is your personal research assistant. It has <strong className="text-white">two powerful modes</strong> — both work by reading through the documents you’ve already uploaded to your <strong className="text-white">Knowledge Base</strong>.
+                            This is your personal research assistant. It has <strong className="text-textMain">two powerful modes</strong> — both work by reading through the documents you’ve already uploaded to your <strong className="text-textMain">Knowledge Base</strong>.
                         </p>
                         <div className="bg-warning/10 border border-warning/20 rounded-lg px-3 py-2 mt-3 flex items-start gap-2">
                             <span className="text-warning text-sm mt-0.5">⚡</span>
@@ -286,13 +285,13 @@ const DeepResearch: React.FC = () => {
                             </p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                            <div className="bg-black/30 rounded-xl p-3 border border-white/5">
+                            <div className="bg-panelBg/10 rounded-xl p-3 border border-border-color/10">
                                 <div className="text-xs font-bold text-accentGlow uppercase tracking-wider mb-1">📋 Checklist Analysis</div>
                                 <p className="text-xs text-textSec leading-relaxed">
                                     Have a list of requirements or points to verify? Pick a document from your Knowledge Base and Nexus will automatically extract all key items, then check each one against your other documents — showing you what’s covered and what’s missing.
                                 </p>
                             </div>
-                            <div className="bg-black/30 rounded-xl p-3 border border-white/5">
+                            <div className="bg-panelBg/10 rounded-xl p-3 border border-border-color/10">
                                 <div className="text-xs font-bold text-accentGlow uppercase tracking-wider mb-1">📝 Long-Form Report</div>
                                 <p className="text-xs text-textSec leading-relaxed">
                                     Need an in-depth research paper or summary? Describe what you need, select a folder, and Nexus will read through your documents and write a detailed, well-structured report — complete with sources and ready to download.
@@ -305,7 +304,7 @@ const DeepResearch: React.FC = () => {
 
             <div className="mb-8 flex justify-between items-end">
                 <div>
-                    <h2 className="text-3xl font-outfit font-bold text-white tracking-tight flex items-center gap-3">
+                    <h2 className="text-3xl font-outfit font-bold text-textMain tracking-tight flex items-center gap-3">
                         <FlaskConical size={28} className="text-accentGlow drop-shadow-[0_0_12px_rgba(59,130,246,0.6)]" />
                         Deep Research
                     </h2>
@@ -313,13 +312,13 @@ const DeepResearch: React.FC = () => {
                         Leverage your knowledge base to run deep checklist analyses or generate long-form research papers from your secure documents.
                     </p>
                     
-                    <div className="flex bg-black/40 border border-white/10 rounded-xl p-1 mt-6 max-w-[400px]">
+                        <div className="flex bg-panelBg/40 border border-border-color/10 rounded-xl p-1 mt-6 max-w-[400px]">
                         <button
                             onClick={() => setResearchMode('checklist')}
                             className={`flex-1 py-1.5 px-4 rounded-lg text-sm font-bold transition-all ${
                                 researchMode === 'checklist' 
                                 ? 'bg-accentGlow/20 text-accentGlow shadow-[0_0_10px_rgba(59,130,246,0.2)] border border-accentGlow/30' 
-                                : 'text-textSec hover:text-white hover:bg-white/5'
+                                : 'text-textSec hover:text-textMain hover:bg-panelBg/20'
                             }`}
                         >
                             Checklist Analysis
@@ -329,7 +328,7 @@ const DeepResearch: React.FC = () => {
                             className={`flex-1 py-1.5 px-4 rounded-lg text-sm font-bold transition-all ${
                                 researchMode === 'report' 
                                 ? 'bg-accentGlow/20 text-accentGlow shadow-[0_0_10px_rgba(59,130,246,0.2)] border border-accentGlow/30' 
-                                : 'text-textSec hover:text-white hover:bg-white/5'
+                                : 'text-textSec hover:text-textMain hover:bg-panelBg/20'
                             }`}
                         >
                             Long-Form Report
@@ -343,7 +342,7 @@ const DeepResearch: React.FC = () => {
                         className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold border transition-all ${
                             selectedFolderId 
                             ? 'bg-accentGlow/10 border-accentGlow/30 text-accentGlow shadow-glow' 
-                            : 'bg-white/5 border-white/5 text-textSec hover:border-white/10'
+                            : 'bg-panelBg/20 border-border-color/10 text-textSec hover:border-border-color/20'
                         }`}
                     >
                         <FolderIcon size={16} />
@@ -354,7 +353,7 @@ const DeepResearch: React.FC = () => {
                     {showFolderSelector && (
                         <>
                             <div className="fixed inset-0 z-20" onClick={() => setShowFolderSelector(false)}></div>
-                            <div className="absolute right-0 top-12 z-30 bg-panelBg border border-white/10 rounded-xl shadow-2xl p-2 min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
+                            <div className="absolute right-0 top-12 z-30 bg-panelBg border border-border-color/10 rounded-xl shadow-2xl p-2 min-w-[200px] animate-in fade-in slide-in-from-top-2 duration-200">
                                 <div className="text-[0.6rem] uppercase tracking-widest text-textSec/60 mb-2 px-3 pt-1">Target Knowledge Source</div>
                                 <button
                                     onClick={() => {
@@ -364,7 +363,7 @@ const DeepResearch: React.FC = () => {
                                     className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                                         selectedFolderId === null 
                                         ? 'bg-accentGlow/10 text-accentGlow' 
-                                        : 'text-textSec hover:bg-white/5 hover:text-white'
+                                        : 'text-textSec hover:bg-panelBg/30 hover:text-textMain'
                                     }`}
                                 >
                                     All Active Knowledge
@@ -379,7 +378,7 @@ const DeepResearch: React.FC = () => {
                                         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors mt-1 ${
                                             selectedFolderId === f.id 
                                             ? 'bg-accentGlow/10 text-accentGlow font-medium' 
-                                            : 'text-textSec hover:bg-white/5 hover:text-white'
+                                            : 'text-textSec hover:bg-panelBg/30 hover:text-textMain'
                                         }`}
                                     >
                                         {f.name}
@@ -395,9 +394,9 @@ const DeepResearch: React.FC = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 pb-20">
                     {/* Left Column: Input & Controls */}
                     <div className="lg:col-span-5 flex flex-col gap-6">
-                        <div className="glass-panel p-6 rounded-2xl border border-white/10 shadow-lg relative overflow-hidden bg-black/40">
+                        <div className="glass-panel p-6 rounded-2xl border border-border-color/10 shadow-lg relative overflow-hidden bg-panelBg/40">
                             <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-outfit font-bold text-white text-lg">Research Checklist</h3>
+                                <h3 className="font-outfit font-bold text-textMain text-lg">Research Checklist</h3>
                                 <button
                                     onClick={() => setShowExtractorModal(true)}
                                     className="flex items-center gap-2 px-3 py-1.5 bg-accentGlow/10 text-accentGlow/90 hover:text-accentGlow hover:bg-accentGlow/20 rounded-xl text-xs font-bold border border-accentGlow/20 transition-all font-outfit"
@@ -409,13 +408,13 @@ const DeepResearch: React.FC = () => {
                             
                             <div className="flex flex-col gap-2 mb-4 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                                 {researchTasks.length === 0 ? (
-                                    <div className="text-center py-10 text-white/30 text-sm font-medium border border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center gap-3">
+                                    <div className="text-center py-10 text-textSec/30 text-sm font-medium border border-dashed border-border-color/10 rounded-xl flex flex-col items-center justify-center gap-3">
                                         <FlaskConical size={32} className="opacity-50" />
                                         No requirements added.<br/>Extract from a document or type below.
                                     </div>
                                 ) : (
                                     researchTasks.map((task, idx) => (
-                                        <div key={idx} className="group flex items-start gap-3 p-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl transition-colors">
+                                        <div key={idx} className="group flex items-start gap-3 p-3 bg-panelBg/20 hover:bg-panelBg/30 border border-border-color/10 rounded-xl transition-colors">
                                             <div className="mt-0.5 shrink-0 w-4 h-4 rounded-md border border-accentGlow/50 flex items-center justify-center bg-accentGlow/10 shadow-[0_0_8px_rgba(59,130,246,0.3)]">
                                                 <CheckCircle2 size={10} className="text-accentGlow" />
                                             </div>
@@ -468,9 +467,9 @@ const DeepResearch: React.FC = () => {
 
                         {/* Report History */}
                         {batchReportHistory.length > 0 && !batchReport && (
-                            <div className="glass-panel p-6 rounded-2xl border border-white/10 bg-black/40">
+                            <div className="glass-panel p-6 rounded-2xl border border-border-color/10 bg-panelBg/20">
                                 <div className="flex items-center justify-between mb-4">
-                                    <h3 className="font-outfit font-bold text-white text-sm tracking-wide">Recent Reports</h3>
+                                    <h3 className="font-outfit font-bold text-textMain text-sm tracking-wide">Recent Reports</h3>
                                     <button
                                         onClick={handleClearAllHistory}
                                         className="text-[10px] uppercase tracking-wider font-bold text-textSec hover:text-danger flex items-center gap-1 transition-colors"
@@ -484,10 +483,10 @@ const DeepResearch: React.FC = () => {
                                         <button
                                             key={idx}
                                             onClick={() => setBatchReport(hist.report)}
-                                            className="w-full text-left p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-accentGlow/30 transition-all flex items-center justify-between group"
+                                            className="w-full text-left p-3 rounded-xl bg-panelBg/10 hover:bg-panelBg/20 border border-border-color/5 hover:border-accentGlow/30 transition-all flex items-center justify-between group"
                                         >
                                             <div>
-                                                <div className="text-xs font-bold text-white mb-0.5 font-outfit">{new Date(hist.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
+                                                <div className="text-xs font-bold text-textMain mb-0.5 font-outfit">{new Date(hist.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
                                                 <div className="text-[10px] text-textSec font-medium flex items-center gap-2">
                                                     <span className="text-success">{hist.report.strong_coverage} Strong</span>
                                                     <span className="text-warning">{hist.report.partial_coverage} Partial</span>
@@ -505,10 +504,10 @@ const DeepResearch: React.FC = () => {
                     {/* Right Column: Report Display */}
                     <div className="lg:col-span-7">
                         {batchReport ? (
-                            <div className="glass-panel rounded-2xl border border-white/10 bg-black/40 shadow-2xl overflow-hidden flex flex-col max-h-[800px] animate-in slide-in-from-bottom-4 duration-300">
-                                <div className="bg-gradient-to-r from-accentGlow/10 to-transparent border-b border-white/10 p-5 shrink-0 flex items-center justify-between">
+                            <div className="glass-panel rounded-2xl border border-border-color/10 bg-panelBg/20 shadow-2xl overflow-hidden flex flex-col max-h-[800px] animate-in slide-in-from-bottom-4 duration-300">
+                                <div className="bg-gradient-to-r from-accentGlow/10 to-transparent border-b border-border-color/10 p-5 shrink-0 flex items-center justify-between">
                                     <div>
-                                        <h3 className="text-xl font-outfit font-bold text-white flex items-center gap-2">
+                                        <h3 className="text-xl font-outfit font-bold text-textMain flex items-center gap-2">
                                             <CheckCircle2 className="text-accentGlow" size={20} />
                                             Checklist Report
                                         </h3>
@@ -517,7 +516,7 @@ const DeepResearch: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                         <button 
                                             onClick={handleDownloadReport}
-                                            className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-textSec hover:text-white rounded-lg border border-white/10 transition-colors text-xs font-bold"
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-panelBg/10 hover:bg-panelBg/20 text-textSec hover:text-textMain rounded-lg border border-border-color/10 transition-colors text-xs font-bold"
                                             title="Download Markdown"
                                         >
                                             <Download size={14} />
@@ -533,7 +532,7 @@ const DeepResearch: React.FC = () => {
                                     </div>
                                 </div>
                                 
-                                <div className="p-5 border-b border-white/5 shrink-0 bg-black/20">
+                                <div className="p-5 border-b border-border-color/5 shrink-0 bg-panelBg/10">
                                     <div className="grid grid-cols-3 gap-4">
                                         <div className="bg-success/10 border border-success/20 rounded-xl p-3 flex flex-col items-center justify-center backdrop-blur-sm">
                                             <div className="text-2xl font-bold text-success font-outfit">{batchReport.strong_coverage}</div>
@@ -548,7 +547,7 @@ const DeepResearch: React.FC = () => {
                                             <div className="text-[10px] uppercase tracking-widest text-danger/70 font-bold">Gaps</div>
                                         </div>
                                     </div>
-                                    <div className="mt-4 w-full bg-white/5 rounded-full h-1.5 overflow-hidden flex">
+                                    <div className="mt-4 w-full bg-panelBg/10 rounded-full h-1.5 overflow-hidden flex">
                                         <div className="bg-success h-full" style={{width: `${(batchReport.strong_coverage / batchReport.total_checkpoints) * 100}%`}}></div>
                                         <div className="bg-warning h-full" style={{width: `${(batchReport.partial_coverage / batchReport.total_checkpoints) * 100}%`}}></div>
                                         <div className="bg-danger h-full" style={{width: `${(batchReport.no_coverage / batchReport.total_checkpoints) * 100}%`}}></div>
@@ -574,22 +573,22 @@ const DeepResearch: React.FC = () => {
                                                         <span className={`text-[10px] font-bold ${colorClass}`}>{idx + 1}</span>
                                                     </div>
                                                     <div className="flex-1">
-                                                        <h4 className="text-sm font-bold text-white leading-relaxed">{result.question}</h4>
+                                                        <h4 className="text-sm font-bold text-textMain leading-relaxed">{result.question}</h4>
                                                         <p className={`text-[10px] uppercase tracking-wider font-bold mt-1 ${colorClass}`}>Coverage: {result.coverage}</p>
                                                     </div>
                                                 </div>
                                                 
                                                 <div className="pl-8">
-                                                    <div className="text-sm text-textSec/90 leading-relaxed font-medium prose prose-invert max-w-none prose-p:my-1 prose-strong:text-white prose-a:text-accentGlow markdown-body">
+                                                    <div className={`text-sm text-textSec/90 leading-relaxed font-medium prose ${theme === 'dark' ? 'prose-invert' : ''} max-w-none prose-p:my-1 prose-strong:text-textMain prose-a:text-accentGlow markdown-body`}>
                                                         <ReactMarkdown>{result.answer}</ReactMarkdown>
                                                     </div>
                                                     
                                                     {result.sources && result.sources.length > 0 && (
-                                                        <div className="mt-3 pt-3 border-t border-white/5">
+                                                        <div className="mt-3 pt-3 border-t border-border-color/5">
                                                             <div className="text-[10px] uppercase tracking-widest text-textSec/50 font-bold mb-2">Sources</div>
                                                             <div className="flex flex-wrap gap-2">
                                                                 {result.sources.map((src: any, sIdx: number) => (
-                                                                    <div key={sIdx} className="inline-flex items-center gap-1.5 px-2 py-1 bg-white/5 rounded-md border border-white/10">
+                                                                    <div key={sIdx} className="inline-flex items-center gap-1.5 px-2 py-1 bg-panelBg/10 rounded-md border border-border-color/10">
                                                                         <FileText size={10} className="text-accentGlow" />
                                                                         <span className="text-xs text-textSec font-medium truncate max-w-[200px]" title={src.filename}>{src.filename}</span>
                                                                     </div>
@@ -604,15 +603,15 @@ const DeepResearch: React.FC = () => {
                                 </div>
                             </div>
                         ) : (
-                            <div className="h-full border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center p-12 text-center text-textSec bg-black/20">
+                            <div className="h-full border border-dashed border-border-color/10 rounded-2xl flex flex-col items-center justify-center p-12 text-center text-textSec bg-panelBg/10">
                                 <FlaskConical size={64} className="opacity-20 mb-6" />
-                                <h3 className="text-xl font-bold text-white mb-2 font-outfit">Ready to Analyse</h3>
+                                <h3 className="text-xl font-bold text-textMain mb-2 font-outfit">Ready to Analyse</h3>
                                 <p className="max-w-md text-sm leading-relaxed mb-6">
                                     Create your checklist on the left and hit Run Analysis. Nexus will process every requirement against your knowledge base and compile a full coverage report here.
                                 </p>
                                 <button
                                     onClick={() => setShowExtractorModal(true)}
-                                    className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold font-outfit transition-colors flex items-center gap-2 shadow-lg border border-white/10"
+                                    className="px-5 py-2.5 bg-panelBg/10 hover:bg-panelBg/20 text-textMain rounded-xl font-bold font-outfit transition-colors flex items-center gap-2 shadow-lg border border-border-color/10"
                                 >
                                     <Sparkles size={16} className="text-accentGlow" />
                                     Try Auto-Extract
@@ -626,11 +625,11 @@ const DeepResearch: React.FC = () => {
                     {/* Left Column: Output Display */}
                     <div className="lg:col-span-8 flex flex-col gap-6 order-2 lg:order-1">
                         {reportResult ? (
-                            <div className="glass-panel rounded-2xl border border-white/10 bg-black/40 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom-4 duration-300">
+                            <div className="glass-panel rounded-2xl border border-border-color/10 bg-panelBg/20 shadow-2xl overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom-4 duration-300">
                                 {/* Report Header */}
-                                <div className="bg-gradient-to-r from-accentGlow/10 to-transparent border-b border-white/10 p-5 shrink-0 flex items-center justify-between">
+                                <div className="bg-gradient-to-r from-accentGlow/10 to-transparent border-b border-border-color/10 p-5 shrink-0 flex items-center justify-between">
                                     <div>
-                                        <h3 className="text-xl font-outfit font-bold text-white flex items-center gap-2">
+                                        <h3 className="text-xl font-outfit font-bold text-textMain flex items-center gap-2">
                                             <Sparkles className="text-accentGlow" size={20} />
                                             Deep Research Report
                                         </h3>
@@ -641,7 +640,7 @@ const DeepResearch: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                         <button 
                                             onClick={handleDownloadDeepReport}
-                                            className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 text-textSec hover:text-white rounded-lg border border-white/10 transition-colors text-xs font-bold"
+                                            className="flex items-center gap-2 px-3 py-1.5 bg-panelBg/10 hover:bg-panelBg/20 text-textSec hover:text-textMain rounded-lg border border-border-color/10 transition-colors text-xs font-bold"
                                             title="Download Markdown"
                                         >
                                             <Download size={14} />
@@ -661,37 +660,37 @@ const DeepResearch: React.FC = () => {
                                 <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
                                     <div className="relative">
                                         <div className="absolute top-0 left-0 w-32 h-32 bg-accentGlow/10 rounded-full blur-[60px] -z-10 pointer-events-none"></div>
-                                        <div className="prose prose-invert max-w-none
-                                            prose-headings:font-outfit prose-headings:text-white prose-headings:tracking-tight
-                                            prose-h1:text-2xl prose-h1:font-bold prose-h1:mb-4 prose-h1:mt-6 prose-h1:border-b prose-h1:border-white/10 prose-h1:pb-3
+                                        <div className={`prose ${theme === 'dark' ? 'prose-invert' : ''} max-w-none
+                                            prose-headings:font-outfit prose-headings:text-textMain prose-headings:tracking-tight
+                                            prose-h1:text-2xl prose-h1:font-bold prose-h1:mb-4 prose-h1:mt-6 prose-h1:border-b prose-border-color/10 prose-h1:pb-3
                                             prose-h2:text-xl prose-h2:font-bold prose-h2:mb-3 prose-h2:mt-6
                                             prose-h3:text-lg prose-h3:font-semibold prose-h3:mb-2 prose-h3:mt-5
                                             prose-p:text-textSec/90 prose-p:leading-[1.8] prose-p:mb-4
-                                            prose-strong:text-white prose-strong:font-bold
+                                            prose-strong:text-textMain prose-strong:font-bold
                                             prose-em:text-accentGlow/80
                                             prose-a:text-accentGlow prose-a:no-underline hover:prose-a:underline
                                             prose-ul:my-3 prose-ul:space-y-1
                                             prose-ol:my-3 prose-ol:space-y-1
                                             prose-li:text-textSec/90 prose-li:leading-relaxed prose-li:marker:text-accentGlow/60
                                             prose-blockquote:border-accentGlow/30 prose-blockquote:bg-accentGlow/5 prose-blockquote:rounded-r-lg prose-blockquote:py-1 prose-blockquote:px-4
-                                            prose-code:text-accentGlow prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
-                                            prose-hr:border-white/10 prose-hr:my-6
-                                        ">
+                                            prose-code:text-accentGlow prose-code:bg-panelBg/10 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
+                                            prose-hr:border-border-color/10 prose-hr:my-6
+                                        `}>
                                             <ReactMarkdown>{reportResult.report}</ReactMarkdown>
                                         </div>
                                     </div>
 
                                     {reportResult.sources && reportResult.sources.length > 0 && (
-                                        <div className="mt-8 pt-6 border-t border-white/10">
-                                            <h4 className="text-sm font-bold text-white mb-4 flex items-center gap-2 uppercase tracking-wide">
+                                        <div className="mt-8 pt-6 border-t border-border-color/10">
+                                            <h4 className="text-sm font-bold text-textMain mb-4 flex items-center gap-2 uppercase tracking-wide">
                                                 <FileText size={16} className="text-accentGlow" />
                                                 Sources Referenced
                                             </h4>
                                             <div className="flex flex-wrap gap-2">
                                                 {reportResult.sources.map((src: any, sIdx: number) => (
-                                                    <div key={sIdx} className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-lg border border-white/10 transition-colors">
+                                                    <div key={sIdx} className="inline-flex items-center gap-2 px-3 py-1.5 bg-panelBg/10 hover:bg-panelBg/20 rounded-lg border border-border-color/10 transition-colors">
                                                         <FileText size={12} className="text-accentGlow" />
-                                                        <span className="text-xs text-white font-medium" title={src.filename}>{src.filename}</span>
+                                                        <span className="text-xs text-textMain font-medium" title={src.filename}>{src.filename}</span>
                                                     </div>
                                                 ))}
                                             </div>
@@ -700,9 +699,9 @@ const DeepResearch: React.FC = () => {
                                 </div>
                             </div>
                         ) : (
-                            <div className="h-[400px] border border-dashed border-white/10 rounded-2xl flex flex-col items-center justify-center p-12 text-center text-textSec bg-black/20">
+                            <div className="h-[400px] border border-dashed border-border-color/10 rounded-2xl flex flex-col items-center justify-center p-12 text-center text-textSec bg-panelBg/10">
                                 <Sparkles size={64} className="opacity-20 mb-6" />
-                                <h3 className="text-xl font-bold text-white mb-2 font-outfit">Deep Research Report</h3>
+                                <h3 className="text-xl font-bold text-textMain mb-2 font-outfit">Deep Research Report</h3>
                                 <p className="max-w-md text-sm leading-relaxed">
                                     Provide a detailed prompt summarizing what you want to research. The AI will ingest a massive context from your target folder and author an extensive, multi-page report.
                                 </p>
@@ -712,8 +711,8 @@ const DeepResearch: React.FC = () => {
 
                     {/* Right Column: Input prompt */}
                     <div className="lg:col-span-4 flex flex-col gap-4 order-1 lg:order-2">
-                        <div className="glass-panel p-6 rounded-2xl border border-white/10 bg-black/40 shadow-lg sticky top-6">
-                            <h3 className="font-outfit font-bold text-white text-lg mb-4 flex items-center gap-2">
+                        <div className="glass-panel p-6 rounded-2xl border border-border-color/10 bg-panelBg/40 shadow-lg sticky top-6">
+                            <h3 className="font-outfit font-bold text-textMain text-lg mb-4 flex items-center gap-2">
                                 <Sparkles size={18} className="text-accentGlow" />
                                 Report Guidelines
                             </h3>
@@ -741,9 +740,9 @@ const DeepResearch: React.FC = () => {
 
                         {/* Report History */}
                         {deepReportHistory.length > 0 && !reportResult && (
-                            <div className="glass-panel p-6 rounded-2xl border border-white/10 bg-black/40">
+                            <div className="glass-panel p-6 rounded-2xl border border-border-color/10 bg-panelBg/20">
                                 <div className="flex items-center justify-between mb-4">
-                                    <h3 className="font-outfit font-bold text-white text-sm tracking-wide">Recent Reports</h3>
+                                    <h3 className="font-outfit font-bold text-textMain text-sm tracking-wide">Recent Reports</h3>
                                     <button
                                         onClick={() => {
                                             setDeepReportHistory([]);
@@ -760,10 +759,10 @@ const DeepResearch: React.FC = () => {
                                         <button
                                             key={idx}
                                             onClick={() => setReportResult(hist.report)}
-                                            className="w-full text-left p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-accentGlow/30 transition-all flex items-center justify-between group"
+                                            className="w-full text-left p-3 rounded-xl bg-panelBg/10 hover:bg-panelBg/20 border border-border-color/5 hover:border-accentGlow/30 transition-all flex items-center justify-between group"
                                         >
                                             <div className="overflow-hidden">
-                                                <div className="text-xs font-bold text-white mb-0.5 font-outfit">{new Date(hist.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
+                                                <div className="text-xs font-bold text-textMain mb-0.5 font-outfit">{new Date(hist.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</div>
                                                 <div className="text-[11px] text-textSec font-medium truncate max-w-[220px]">
                                                     {hist.prompt}
                                                 </div>

@@ -18,10 +18,8 @@ interface ChatContextType {
     localMessages: Message[];
     loading: boolean;
     streaming: boolean;
-    provider: string;
     history: any[];
     selectedFolderId: string | null;
-    setProvider: (provider: string) => void;
     setSelectedFolderId: (id: string | null) => void;
     sendQuery: (question: string) => Promise<void>;
     giveFeedback: (messageIndex: number, feedback: number) => Promise<void>;
@@ -42,18 +40,10 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const saved = sessionStorage.getItem('chat_history');
         return saved ? JSON.parse(saved) : [];
     });
-    const [provider, setProviderState] = useState(() => {
-        return sessionStorage.getItem('chat_provider') || 'gemini';
-    });
     const [loading, setLoading] = useState(false);
     const [streaming, setStreaming] = useState(false);
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
     const receivedFirstToken = useRef(false);
-
-    const setProvider = (p: string) => {
-        setProviderState(p);
-        sessionStorage.setItem('chat_provider', p);
-    };
 
     useEffect(() => {
         sessionStorage.setItem('chat_messages', JSON.stringify(localMessages));
@@ -115,7 +105,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             await queryService.streamAsk(
                 {
                     question,
-                    provider,
                     folder_id: selectedFolderId,
                 },
                 {
@@ -216,17 +205,15 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setLoading(false);
             setStreaming(false);
         }
-    }, [history, provider, selectedFolderId]);
+    }, [history, selectedFolderId]);
 
     return (
         <ChatContext.Provider value={{ 
             localMessages, 
             loading, 
             streaming,
-            provider, 
             history, 
             selectedFolderId,
-            setProvider,
             setSelectedFolderId,
             sendQuery, 
             giveFeedback,

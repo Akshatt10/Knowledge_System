@@ -212,7 +212,7 @@ const KnowledgeBase: React.FC = () => {
                     </div>
                     <button
                         onClick={loadData}
-                        className="glass-panel px-5 py-2.5 flex items-center gap-2 hover:bg-white/10 transition-colors duration-300 text-sm font-medium border-white/20 hover:border-white/30 w-full sm:w-auto justify-center"
+                        className="glass-panel px-5 py-2.5 flex items-center gap-2 hover:bg-panelBg/20 transition-colors duration-300 text-sm font-medium border-border-color/10 w-full sm:w-auto justify-center text-textMain"
                     >
                         {loading ? <Loader2 size={16} className="animate-spin text-accentGlow" /> : <RefreshCw size={16} className="text-accentGlow" />}
                         Refresh Library
@@ -237,16 +237,16 @@ const KnowledgeBase: React.FC = () => {
                                     e.preventDefault();
                                     if (e.dataTransfer.files.length > 0) handleFileUploads(e.dataTransfer.files);
                                 }}
-                                className="border-[3px] border-dashed border-white/20 rounded-[20px] p-8 md:p-16 text-center cursor-pointer transition-all duration-300 hover:border-accentGlow/50 hover:bg-accentGlow/5 flex flex-col items-center justify-center min-h-[280px] md:min-h-[340px]"
+                                className="border-[3px] border-dashed border-border-color/20 rounded-[20px] p-8 md:p-16 text-center cursor-pointer transition-all duration-300 hover:border-accentGlow/50 hover:bg-accentGlow/5 flex flex-col items-center justify-center min-h-[280px] md:min-h-[340px]"
                             >
-                                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white/5 flex items-center justify-center mb-6 shadow-inner ring-4 ring-white/5">
+                                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-panelBg/10 flex items-center justify-center mb-6 shadow-inner ring-4 ring-border-color/5">
                                     <CloudUpload size={32} className="text-textSec" />
                                 </div>
                                 <h4 className="text-lg font-semibold text-textMain mb-2">Drag & Drop Files</h4>
                                 <p className="text-textSec text-sm">Or tap to browse</p>
                                 <div className="mt-8 flex gap-2 justify-center flex-wrap">
                                     {['PDF', 'TXT', 'DOCX', 'JSON'].map(ext => (
-                                        <span key={ext} className="px-3 py-1 bg-white/5 border border-white/10 rounded-md text-[0.7rem] uppercase tracking-widest font-semibold text-textMain/50">
+                                        <span key={ext} className="px-3 py-1 bg-panelBg/10 border border-border-color/10 rounded-md text-[0.7rem] uppercase tracking-widest font-semibold text-textSec">
                                             {ext}
                                         </span>
                                     ))}
@@ -257,7 +257,7 @@ const KnowledgeBase: React.FC = () => {
                                 />
                             </div>
                         ) : (
-                            <div className="p-8 md:p-12 text-center flex flex-col items-center justify-center min-h-[280px] md:min-h-[340px] border border-white/5 rounded-2xl bg-black/20 relative overflow-hidden">
+                            <div className="p-8 md:p-12 text-center flex flex-col items-center justify-center min-h-[280px] md:min-h-[340px] border border-border-color/10 rounded-2xl bg-panelBg/20 relative overflow-hidden">
                                 <div className="absolute inset-0 bg-accent-gradient opacity-5 animate-pulse"></div>
                                 <Loader2 size={48} className="animate-spin text-accentGlow mb-6 drop-shadow-glow relative z-10" />
                                 <h4 className="text-lg font-semibold text-textMain mb-2 relative z-10">
@@ -266,7 +266,7 @@ const KnowledgeBase: React.FC = () => {
                                 <p className="text-textSec text-xs md:text-sm mb-8 truncate w-full max-w-[260px] relative z-10">
                                     {currentFileName}
                                 </p>
-                                <div className="w-full max-w-[260px] h-2 bg-white/10 rounded-full overflow-hidden shadow-inner relative z-10">
+                                <div className="w-full max-w-[260px] h-2 bg-panelBg/30 rounded-full overflow-hidden shadow-inner relative z-10">
                                     <motion.div
                                         initial={{ width: 0 }}
                                         animate={{ width: `${uploadProgress}%` }}
@@ -306,13 +306,13 @@ const KnowledgeBase: React.FC = () => {
                                     className="flex gap-2 items-center"
                                 >
                                     <div className="relative flex-1">
-                                        <Link size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-textSec/50" />
+                                        <Link size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-textSec" />
                                         <input
                                             type="url"
                                             value={urlInput}
                                             onChange={(e) => setUrlInput(e.target.value)}
                                             placeholder="Paste a URL to ingest as a document..."
-                                            className="w-full bg-black/30 border border-white/10 pl-10 pr-4 py-3 rounded-xl text-sm text-textMain outline-none focus:border-accentGlow/50 focus:ring-2 focus:ring-accentGlow/10 transition-all placeholder:text-textSec/40"
+                                            className="w-full bg-panelBg/30 border border-border-color/10 pl-10 pr-4 py-3 rounded-xl text-sm text-textMain outline-none focus:border-accentGlow/50 focus:ring-2 focus:ring-accentGlow/10 transition-all placeholder:text-textSec/60 font-medium"
                                         />
                                     </div>
                                     <button
@@ -354,7 +354,7 @@ const KnowledgeBase: React.FC = () => {
                             </div>
                             <button 
                                 onClick={() => setIsCreatingFolder(true)}
-                                className="p-2 hover:bg-white/5 rounded-lg text-textSec hover:text-accentGlow transition-colors"
+                                className="p-2 hover:bg-panelBg/10 rounded-lg text-textSec hover:text-accentGlow transition-colors"
                                 title="Create New Folder"
                             >
                                 <FolderPlus size={18} />
@@ -368,7 +368,7 @@ const KnowledgeBase: React.FC = () => {
                                 className={`px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
                                     activeFolderId === null 
                                     ? 'bg-accentGlow/10 border-accentGlow/30 text-accentGlow' 
-                                    : 'bg-white/5 border-white/5 text-textSec hover:border-white/10'
+                                    : 'bg-panelBg/10 border-border-color/10 text-textSec hover:bg-panelBg/20'
                                 }`}
                             >
                                 All Documents
@@ -380,7 +380,7 @@ const KnowledgeBase: React.FC = () => {
                                         className={`px-4 py-2 pr-10 rounded-xl text-sm font-medium transition-all border whitespace-nowrap ${
                                             activeFolderId === folder.id 
                                             ? 'bg-accentGlow/10 border-accentGlow/30 text-accentGlow' 
-                                            : 'bg-white/5 border-white/5 text-textSec hover:border-white/10'
+                                            : 'bg-panelBg/10 border-border-color/10 text-textSec hover:bg-panelBg/20'
                                         }`}
                                     >
                                         <FolderIcon size={14} className="inline mr-2 mt-[-2px]" />
@@ -391,7 +391,7 @@ const KnowledgeBase: React.FC = () => {
                                             e.stopPropagation();
                                             handleDeleteFolder(folder.id, folder.name);
                                         }}
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover/folder:opacity-100 hover:text-danger transition-opacity"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 opacity-0 group-hover/folder:opacity-100 hover:text-danger hover:bg-danger/10 rounded transition-all"
                                     >
                                         <Trash2 size={12} />
                                     </button>
@@ -401,8 +401,8 @@ const KnowledgeBase: React.FC = () => {
 
                         {/* Create Folder Modal / Overlay */}
                         {isCreatingFolder && (
-                            <div className="absolute inset-x-8 top-16 z-20 bg-panelBg border border-white/10 p-6 rounded-2xl shadow-2xl animate-in fade-in zoom-in duration-200 backdrop-blur-xl">
-                                <h4 className="text-white font-bold mb-4 flex items-center gap-2">
+                            <div className="absolute inset-x-8 top-16 z-20 bg-panelBg border border-border-color/10 p-6 rounded-2xl shadow-2xl animate-in fade-in zoom-in duration-200 backdrop-blur-xl">
+                                <h4 className="text-textMain font-bold mb-4 flex items-center gap-2">
                                     <FolderPlus size={18} className="text-accentGlow" />
                                     New Knowledge Container
                                 </h4>
@@ -413,20 +413,20 @@ const KnowledgeBase: React.FC = () => {
                                         value={newFolderName}
                                         onChange={(e) => setNewFolderName(e.target.value)}
                                         placeholder="e.g. Research Papers..."
-                                        className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-white outline-none focus:border-accentGlow/50 transition-all font-medium"
+                                        className="flex-1 bg-panelBg/20 border border-border-color/10 rounded-xl px-4 py-2.5 text-textMain outline-none focus:border-accentGlow/50 transition-all font-medium placeholder:text-textSec/40"
                                         disabled={isSubmittingFolder}
                                     />
                                     <button 
                                         type="submit" 
                                         disabled={isSubmittingFolder || !newFolderName.trim()}
-                                        className="bg-accentGlow text-darkBg px-6 py-2.5 rounded-xl font-bold text-sm shadow-glow hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center gap-2"
+                                        className="bg-accentGlow text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow-glow hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center gap-2"
                                     >
                                         {isSubmittingFolder ? <Loader2 size={16} className="animate-spin" /> : 'Create'}
                                     </button>
                                     <button 
                                         type="button" 
                                         onClick={() => setIsCreatingFolder(false)} 
-                                        className="px-4 py-2 text-sm text-textSec font-semibold hover:text-white transition-colors"
+                                        className="px-4 py-2 text-sm text-textSec font-semibold hover:text-textMain transition-colors"
                                     >
                                         Cancel
                                     </button>
@@ -439,7 +439,7 @@ const KnowledgeBase: React.FC = () => {
                                 .filter(doc => activeFolderId === null || doc.folder_id === activeFolderId)
                                 .length === 0 && !loading ? (
                                 <div className="text-center py-20 text-textSec flex flex-col items-center justify-center h-full">
-                                    <div className="w-24 h-24 mb-6 rounded-full bg-white/5 flex items-center justify-center">
+                                    <div className="w-24 h-24 mb-6 rounded-full bg-panelBg/10 flex items-center justify-center">
                                         <FileText size={40} className="opacity-20" />
                                     </div>
                                     <p className="font-medium text-lg text-textMain">No documents here</p>
@@ -454,11 +454,11 @@ const KnowledgeBase: React.FC = () => {
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: idx * 0.05 }}
-                                        className="bg-black/40 border border-white/5 p-5 rounded-[16px] flex flex-col gap-4 hover:border-white/10 hover:bg-black/60 transition-colors group"
+                                        className="bg-panelBg/40 border border-border-color/5 p-5 rounded-[16px] flex flex-col gap-4 hover:border-border-color/10 hover:bg-panelBg/60 transition-all group"
                                     >
                                         <div className="flex justify-between items-start w-full gap-4">
                                             <div className="flex items-start gap-4 flex-1 min-w-0">
-                                                <div className="p-3 bg-white/5 rounded-xl shadow-[inset_0_2px_10px_rgba(255,255,255,0.02)] group-hover:bg-accentGlow/10 group-hover:text-accentGlow transition-colors text-textSec shrink-0">
+                                                <div className="p-3 bg-panelBg/10 rounded-xl shadow-[inset_0_2px_10px_rgba(255,255,255,0.02)] group-hover:bg-accentGlow/10 group-hover:text-accentGlow transition-colors text-textSec shrink-0 border border-border-color/5">
                                                     <FileText size={24} />
                                                 </div>
                                                  <div className="flex-1 min-w-0">
@@ -477,7 +477,7 @@ const KnowledgeBase: React.FC = () => {
                                                          </div>
                                                      )}
                                                      <div className="text-xs text-textSec mt-2 flex items-center gap-2 flex-wrap">
-                                                        <span className="px-2 py-0.5 bg-white/10 rounded-md font-medium text-white/70">{doc.chunk_count} chunks</span>
+                                                        <span className="px-2 py-0.5 bg-panelBg/20 rounded-md font-bold text-textMain/80 border border-border-color/5">{doc.chunk_count} chunks</span>
                                                         <span className="opacity-30">•</span>
                                                         <span className="opacity-70">{new Date(doc.uploaded_at).toLocaleDateString()}</span>
                                                         <span className="opacity-30">•</span>
@@ -492,11 +492,11 @@ const KnowledgeBase: React.FC = () => {
                                                             </button>
                                                             
                                                             {movingDocId === doc.document_id && (
-                                                                <div className="absolute left-0 top-6 z-30 bg-panelBg border border-white/10 rounded-lg shadow-xl p-2 min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-150">
-                                                                    <div className="text-[0.6rem] uppercase tracking-widest text-white/30 mb-2 px-2">Move to</div>
+                                                                <div className="absolute left-0 top-6 z-30 bg-panelBg border border-border-color/10 rounded-lg shadow-xl p-2 min-w-[140px] animate-in fade-in slide-in-from-top-2 duration-150 backdrop-blur-xl">
+                                                                    <div className="text-[0.6rem] uppercase tracking-widest text-textSec/50 mb-2 px-2 font-bold">Move to</div>
                                                                     <button 
                                                                         onClick={() => handleMoveDocument(doc.document_id, null)}
-                                                                        className="w-full text-left px-3 py-1.5 hover:bg-white/5 rounded text-xs text-white/70 hover:text-white"
+                                                                        className="w-full text-left px-3 py-1.5 hover:bg-panelBg/20 rounded text-xs text-textSec hover:text-textMain transition-all"
                                                                     >
                                                                         All Documents (Root)
                                                                     </button>
@@ -504,7 +504,7 @@ const KnowledgeBase: React.FC = () => {
                                                                         <button 
                                                                             key={f.id}
                                                                             onClick={() => handleMoveDocument(doc.document_id, f.id)}
-                                                                            className="w-full text-left px-3 py-1.5 hover:bg-white/5 rounded text-xs text-white/70 hover:text-white"
+                                                                            className="w-full text-left px-3 py-1.5 hover:bg-panelBg/20 rounded text-xs text-textSec hover:text-textMain transition-all"
                                                                         >
                                                                             {f.name}
                                                                         </button>
