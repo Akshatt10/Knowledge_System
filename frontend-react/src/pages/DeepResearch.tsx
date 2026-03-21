@@ -431,7 +431,7 @@ const DeepResearch: React.FC = () => {
                                 )}
                             </div>
                             
-                            <div className="w-full relative flex items-center bg-black/50 border border-white/10 rounded-xl px-3 py-3 flex-1 focus-within:border-accentGlow/50 transition-colors">
+                            <div className="w-full relative flex items-center bg-panelBg/30 border border-border-color/20 rounded-xl px-3 py-3 flex-1 focus-within:border-accentGlow/50 transition-colors">
                                 <PlusCircle size={16} className="text-textSec shrink-0" />
                                 <input 
                                     value={newTaskInput}
@@ -720,7 +720,7 @@ const DeepResearch: React.FC = () => {
                                 value={reportPrompt}
                                 onChange={(e) => setReportPrompt(e.target.value)}
                                 placeholder="E.g., Analyze all Q3 revenue reports and draft a comprehensive performance review comparing them to Q2. Highlight key growth areas and risk factors..."
-                                className="w-full h-48 bg-black/50 border border-white/10 rounded-xl p-4 text-white text-sm placeholder:text-textSec/50 outline-none focus:border-accentGlow/50 resize-none transition-colors custom-scrollbar"
+                                className="w-full h-48 bg-panelBg/30 border border-white/20 rounded-xl p-4 text-textMain text-sm placeholder:text-textSec/50 outline-none focus:border-accentGlow/50 resize-none transition-colors custom-scrollbar"
                             />
                             <button
                                 onClick={handleGenerateReport}
@@ -801,7 +801,7 @@ const DeepResearch: React.FC = () => {
                                 </div>
                                 <button 
                                     onClick={() => setShowExtractorModal(false)}
-                                    className="p-2 border border-white/5 hover:bg-white/10 rounded-lg text-textSec transition-colors"
+                                    className="p-2 border border-white/5 hover:bg-panelBg/30 rounded-lg text-textSec transition-colors"
                                 >
                                     <XCircle size={20} />
                                 </button>
@@ -809,7 +809,7 @@ const DeepResearch: React.FC = () => {
 
                             <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar pr-2 flex flex-col gap-2">
                                 {allDocuments.length === 0 ? (
-                                    <div className="text-center p-8 bg-white/5 rounded-xl border border-white/10">
+                                    <div className="text-center p-8 bg-panelBg/20 rounded-xl border border-white/10">
                                         <FileText size={48} className="mx-auto text-white/20 mb-3" />
                                         <p className="text-sm font-medium text-textSec">No documents in your Knowledge Base.</p>
                                     </div>
@@ -817,7 +817,7 @@ const DeepResearch: React.FC = () => {
                                     allDocuments.map((doc) => (
                                         <div 
                                             key={doc.document_id}
-                                            className="group flex flex-col bg-black/40 border border-white/5 hover:border-accentGlow/30 rounded-xl p-3 transition-all cursor-pointer"
+                                            className="group flex flex-col bg-panelBg/20 border border-border-color/10 hover:border-accentGlow/30 rounded-xl p-3 transition-all cursor-pointer"
                                             onClick={() => handleExtractChecklist(doc.document_id)}
                                         >
                                             <div className="flex items-center justify-between">
@@ -834,7 +834,7 @@ const DeepResearch: React.FC = () => {
                                                 </div>
                                                 
                                                 <button 
-                                                    className="w-8 h-8 rounded-lg bg-white/5 group-hover:bg-accentGlow/20 flex items-center justify-center shrink-0 group-hover:text-accentGlow transition-colors disabled:opacity-50"
+                                                    className="w-8 h-8 rounded-lg bg-panelBg/20 group-hover:bg-accentGlow/20 flex items-center justify-center shrink-0 group-hover:text-accentGlow transition-colors disabled:opacity-50"
                                                     disabled={extractingId === doc.document_id}
                                                 >
                                                     {extractingId === doc.document_id ? <Loader2 size={16} className="animate-spin" /> : <ChevronRight size={16} />}

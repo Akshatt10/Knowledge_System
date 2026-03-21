@@ -10,7 +10,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        darkBg: 'rgb(var(--dark-bg) / <alpha-value>)',
+        darkBg: 'rgb(var(--main-bg) / <alpha-value>)',
         panelBg: 'rgb(var(--panel-bg) / <alpha-value>)',
         accentGlow: 'rgb(var(--accent-glow) / <alpha-value>)',
         accentSec: 'rgb(var(--accent-sec) / <alpha-value>)',
