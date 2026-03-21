@@ -438,7 +438,7 @@ const DeepResearch: React.FC = () => {
                                     onChange={e => setNewTaskInput(e.target.value)}
                                     onKeyDown={e => e.key === 'Enter' && handleAddResearchTask(e)}
                                     placeholder="Add a new requirement to check..."
-                                    className="w-full bg-transparent border-none outline-none text-sm text-white px-3 placeholder:text-textSec/50 font-medium"
+                                    className="w-full bg-transparent border-none outline-none text-sm text-textMain px-3 placeholder:text-textSec/50 font-medium"
                                 />
                                 <button 
                                     onClick={handleAddResearchTask}
@@ -791,7 +791,7 @@ const DeepResearch: React.FC = () => {
 
                             <div className="flex items-center justify-between shrink-0">
                                 <div>
-                                    <h3 className="text-2xl font-outfit font-bold text-white flex items-center gap-3">
+                                    <h3 className="text-2xl font-outfit font-bold text-textMain flex items-center gap-3">
                                         <Sparkles size={28} className="text-accentGlow drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
                                         Extract Checklist
                                     </h3>
@@ -801,7 +801,7 @@ const DeepResearch: React.FC = () => {
                                 </div>
                                 <button 
                                     onClick={() => setShowExtractorModal(false)}
-                                    className="p-2 border border-white/5 hover:bg-panelBg/30 rounded-lg text-textSec transition-colors"
+                                    className="p-2 border border-border-color/10 hover:bg-panelBg/30 rounded-lg text-textSec transition-colors"
                                 >
                                     <XCircle size={20} />
                                 </button>
@@ -809,8 +809,8 @@ const DeepResearch: React.FC = () => {
 
                             <div className="flex-1 overflow-y-auto min-h-0 custom-scrollbar pr-2 flex flex-col gap-2">
                                 {allDocuments.length === 0 ? (
-                                    <div className="text-center p-8 bg-panelBg/20 rounded-xl border border-white/10">
-                                        <FileText size={48} className="mx-auto text-white/20 mb-3" />
+                                    <div className="text-center p-8 bg-panelBg/20 rounded-xl border border-border-color/10">
+                                        <FileText size={48} className="mx-auto text-textSec/20 mb-3" />
                                         <p className="text-sm font-medium text-textSec">No documents in your Knowledge Base.</p>
                                     </div>
                                 ) : (
@@ -826,7 +826,7 @@ const DeepResearch: React.FC = () => {
                                                         <FileText size={18} className="text-accentGlow" />
                                                     </div>
                                                     <div className="truncate">
-                                                        <h4 className="text-sm font-bold text-white truncate break-words" title={doc.filename}>{doc.filename}</h4>
+                                                        <h4 className="text-sm font-bold text-textMain truncate break-words" title={doc.filename}>{doc.filename}</h4>
                                                         <p className="text-[10px] text-textSec uppercase font-semibold mt-0.5 tracking-wider">
                                                             {doc.file_type || 'TXT'} • {doc.chunk_count} CHUNKS
                                                         </p>
