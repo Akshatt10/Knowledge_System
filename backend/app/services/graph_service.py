@@ -85,17 +85,26 @@ class GraphService:
 
         for doc in documents:
             try:
-                # Fetch all vectors for this document
-                # Note: Pinecone query with filter and include_values
-                # We use a dummy vector for the query since we only care about metadata filter
-                query_response = index.query(
-                    vector=[0.0] * 384, # assuming 384-dim for HuggingFace model
-                    filter={"document_id": {"$eq": doc.id}},
-                    top_k=1000,
-                    include_values=True
-                )
-                
-                vectors = [match['values'] for match in query_response.get('matches', [])]
+                # Fetch all vectors for this document using list + fetch
+                # instead of ANN query with zero vector (which returns unreliable results)
+                all_ids = []
+                for id_batch in index.list(prefix=f"{doc.id}_"):
+                    all_ids.extend(id_batch)
+
+                if not all_ids:
+                    # Fallback: try without prefix if IDs don't follow prefix convention
+                    query_response = index.query(
+                        vector=[0.0] * 384,
+                        filter={"document_id": {"$eq": doc.id}},
+                        top_k=100,
+                        include_values=True
+                    )
+                    vectors = [match['values'] for match in query_response.get('matches', [])]
+                else:
+                    # Fetch actual vectors by ID — accurate, not approximate
+                    fetch_response = index.fetch(ids=all_ids)
+                    vectors = [v['values'] for v in fetch_response.get('vectors', {}).values()]
+
                 if vectors:
                     centroids[doc.id] = np.mean(vectors, axis=0)
                     logger.debug("Computed centroid for %s from %d chunks", doc.filename, len(vectors))

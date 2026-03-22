@@ -462,8 +462,8 @@ const Connectors: React.FC = () => {
                             'notion', 'notion',
                             'Notion',
                             'Import pages and notes from your Notion workspace',
-                            <BookOpen size={24} className="text-white/80" />,
-                            'bg-white/5',
+                            <BookOpen size={24} className="text-textMain" />,
+                            'bg-textMain/5',
                         )}
 
                         {renderConnectorCard(

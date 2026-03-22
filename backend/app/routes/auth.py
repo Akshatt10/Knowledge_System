@@ -112,7 +112,7 @@ def google_sso_redirect():
             "https://www.googleapis.com/auth/userinfo.email",
             "https://www.googleapis.com/auth/userinfo.profile",
         ],
-        redirect_uri=settings.GOOGLE_REDIRECT_URI.replace("/connectors/", "/auth/"),
+        redirect_uri=settings.GOOGLE_AUTH_REDIRECT_URI,
     )
 
     auth_url, _ = flow.authorization_url(
@@ -147,7 +147,7 @@ def google_sso_callback(code: str, state: str = "sso_login", db: Session = Depen
                 "https://www.googleapis.com/auth/userinfo.email",
                 "https://www.googleapis.com/auth/userinfo.profile",
             ],
-            redirect_uri=settings.GOOGLE_REDIRECT_URI.replace("/connectors/", "/auth/"),
+            redirect_uri=settings.GOOGLE_AUTH_REDIRECT_URI,
         )
 
         code_verifier = session_store.get_verifier(state)

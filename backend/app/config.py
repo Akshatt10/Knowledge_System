@@ -109,21 +109,18 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     GOOGLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/auth/google/callback"
+    GOOGLE_AUTH_REDIRECT_URI: str = "http://localhost:8000/api/auth/google/callback"
     FRONTEND_URL: str = "http://localhost:5173"
 
     # ─────────────────────────────────────
     # CORS
     # ─────────────────────────────────────
-    CORS_ORIGINS: list[str] = ["*"]
+    CORS_ORIGINS: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
     # ─────────────────────────────────────
     # Connectors (Google Drive)
     # ─────────────────────────────────────
-    GOOGLE_CLIENT_ID: str = ""
-    GOOGLE_CLIENT_SECRET: str = ""
-    GOOGLE_REDIRECT_URI: str = "http://localhost:8000/api/connectors/google/callback"
-    FRONTEND_URL: str = "http://localhost:5173"
+    GOOGLE_DRIVE_REDIRECT_URI: str = "http://localhost:8000/api/connectors/google/callback"
 
     # ─────────────────────────────────────
     # Connectors (Notion)

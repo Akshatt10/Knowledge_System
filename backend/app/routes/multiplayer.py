@@ -162,7 +162,9 @@ def leave_room(
         
     # Before removing the member, find all documents they own that are bound to this room
     # and remove the association so other members can no longer query them.
-    user_docs_in_room = db.query(RoomDocument).join(Document).filter(
+    user_docs_in_room = db.query(RoomDocument).join(
+        Document, RoomDocument.document_id == Document.id
+    ).filter(
         RoomDocument.room_id == room_id,
         Document.user_id == str(current_user.id)
     ).all()
