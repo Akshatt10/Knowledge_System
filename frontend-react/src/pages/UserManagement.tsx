@@ -13,7 +13,6 @@ import {
 import { adminService } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-
 interface UserData {
     id: string;
     email: string;
