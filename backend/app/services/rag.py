@@ -309,19 +309,24 @@ Answer the question using ONLY the context above.
         
         confidence_score = round(confidence_score, 2)
 
-        # ── Follow-up questions (sync shim via asyncio) ────────────────
+        # ── Follow-up questions (sync-safe async bridge) ─────────────────
         import asyncio
         follow_ups: list[str] = []
         if had_answer and formatted_context:
             try:
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # Can't run_until_complete inside an existing loop — skip gracefully
-                    follow_ups = []
-                else:
-                    follow_ups = loop.run_until_complete(
+                loop = asyncio.get_running_loop()
+                # We're inside an async loop (FastAPI) — schedule coroutine properly
+                import concurrent.futures
+                with concurrent.futures.ThreadPoolExecutor() as pool:
+                    follow_ups = pool.submit(
+                        asyncio.run,
                         self.generate_followups(formatted_context, llm)
-                    )
+                    ).result(timeout=10)
+            except RuntimeError:
+                # No running loop — we're in a true sync context
+                follow_ups = asyncio.run(
+                    self.generate_followups(formatted_context, llm)
+                )
             except Exception:
                 follow_ups = []
 

@@ -44,6 +44,9 @@ class RecursiveCharacterTextSplitter:
                     removed = current_chunk.pop(0)
                     current_length -= len(removed) + len(separator)
 
+                # Recalculate to prevent drift from incremental accounting
+                current_length = sum(len(p) for p in current_chunk) + len(separator) * max(0, len(current_chunk) - 1)
+
             current_chunk.append(piece)
             current_length += piece_len
 

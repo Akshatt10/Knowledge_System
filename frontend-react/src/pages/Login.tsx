@@ -128,7 +128,7 @@ const Login: React.FC = () => {
                 initial={{ opacity: 0, y: 30, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ duration: 0.5, ease: "easeOut" }}
-                className="glass-panel w-full max-w-[440px] p-6 sm:p-10 relative z-10 box-border shadow-2xl"
+                className="w-full max-w-[440px] p-6 sm:p-10 relative z-10 box-border shadow-2xl backdrop-blur-[20px] rounded-2xl border border-white/10" style={{ backgroundColor: 'rgba(10, 10, 15, 0.85)' }}
             >
                 <div className="text-center mb-8 sm:mb-10">
                     <div className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 sm:mb-5 flex items-center justify-center rounded-2xl bg-accent-gradient shadow-glow relative">
@@ -138,7 +138,7 @@ const Login: React.FC = () => {
                     <h1 className="text-2xl sm:text-3xl font-outfit font-bold tracking-tight text-white mb-2">
                         {isLogin ? 'Welcome Back' : 'Create Account'}
                     </h1>
-                    <p className="text-textSec text-[11px] sm:text-sm font-medium">
+                    <p className="text-white/60 text-[11px] sm:text-sm font-medium">
                         Nexus Intelligence System
                     </p>
                 </div>
@@ -165,15 +165,15 @@ const Login: React.FC = () => {
                 {/* Divider */}
                 <div className="flex items-center gap-4 mb-5">
                     <div className="flex-1 h-px bg-white/10"></div>
-                    <span className="text-[0.7rem] text-textSec uppercase tracking-wider font-medium">or</span>
+                    <span className="text-[0.7rem] text-white/50 uppercase tracking-wider font-medium">or</span>
                     <div className="flex-1 h-px bg-white/10"></div>
                 </div>
 
                 <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                     <div className="relative group">
-                        <label className="block text-[0.8rem] font-medium text-textSec mb-2 uppercase tracking-wide">Email</label>
+                        <label className="block text-[0.8rem] font-medium text-white/60 mb-2 uppercase tracking-wide">Email</label>
                         <div className="relative flex items-center">
-                            <Mail size={18} className="absolute left-4 text-textSec group-focus-within:text-accentGlow transition-colors" />
+                            <Mail size={18} className="absolute left-4 text-white/50 group-focus-within:text-[#00f0ff] transition-colors" />
                             <input
                                 type="email" required
                                 value={email} onChange={(e) => { setEmail(e.target.value); setError(null); }}
@@ -184,9 +184,9 @@ const Login: React.FC = () => {
                     </div>
 
                     <div className="relative group">
-                        <label className="block text-[0.8rem] font-medium text-textSec mb-2 uppercase tracking-wide">Password</label>
+                        <label className="block text-[0.8rem] font-medium text-white/60 mb-2 uppercase tracking-wide">Password</label>
                         <div className="relative flex items-center">
-                            <Lock size={18} className="absolute left-4 text-textSec group-focus-within:text-accentGlow transition-colors" />
+                            <Lock size={18} className="absolute left-4 text-white/50 group-focus-within:text-[#00f0ff] transition-colors" />
                             <input
                                 type={showPassword ? 'text' : 'password'} required
                                 value={password} onChange={(e) => { setPassword(e.target.value); setError(null); }}
@@ -197,7 +197,7 @@ const Login: React.FC = () => {
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
                                 tabIndex={-1}
-                                className="absolute right-4 text-textSec hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
+                                className="absolute right-4 text-white/50 hover:text-white transition-colors bg-transparent border-none cursor-pointer p-0"
                             >
                                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                             </button>
@@ -237,12 +237,12 @@ const Login: React.FC = () => {
                         <button
                             type="button"
                             onClick={() => { setIsLogin(!isLogin); setError(null); }}
-                            className="bg-transparent border-none text-textSec hover:text-white cursor-pointer text-sm font-medium transition-colors"
+                            className="bg-transparent border-none text-white/60 hover:text-white cursor-pointer text-sm font-medium transition-colors"
                         >
                             {isLogin ? (
-                                <>Don't have an account? <span className="text-accentGlow">Sign Up</span></>
+                                <>Don't have an account? <span className="text-[#00f0ff]">Sign Up</span></>
                             ) : (
-                                <>Already have an account? <span className="text-accentGlow">Sign In</span></>
+                                <>Already have an account? <span className="text-[#00f0ff]">Sign In</span></>
                             )}
                         </button>
                     </div>

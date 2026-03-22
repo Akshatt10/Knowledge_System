@@ -26,13 +26,19 @@ class SessionStore:
         except Exception as e:
             logger.error(f"Redis set_verifier failed: {e}")
 
-    def get_verifier(self, state: str) -> str | None:
-        """Retrieve and delete the verifier for a state."""
+    def get_verifier(self, state: str, consume: bool = False) -> str | None:
+        """Retrieve the verifier for a state.
+        
+        Args:
+            state: The OAuth state key
+            consume: If True, delete the key after retrieval (use only on confirmed success).
+                     If False, leave it for potential retries — TTL handles cleanup.
+        """
         if not self.redis:
             return None
         try:
             val = self.redis.get(f"oauth_state:{state}")
-            if val:
+            if val and consume:
                 self.redis.delete(f"oauth_state:{state}")
             return val
         except Exception as e:

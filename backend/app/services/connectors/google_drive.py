@@ -52,14 +52,11 @@ def _build_flow() -> Flow:
             }
         },
         scopes=SCOPES,
-        redirect_uri=settings.GOOGLE_REDIRECT_URI,
+        redirect_uri=settings.GOOGLE_DRIVE_REDIRECT_URI,
     )
 
 
 class GoogleDriveConnector(BaseConnector):
-
-    def __init__(self):
-        self._pending_verifiers: dict[str, str] = {}
 
     def get_auth_url(self, user_id: str) -> str:
         flow = _build_flow()
@@ -69,12 +66,15 @@ class GoogleDriveConnector(BaseConnector):
             state=user_id,
         )
         if hasattr(flow, "code_verifier") and flow.code_verifier:
-            self._pending_verifiers[user_id] = flow.code_verifier
+            # Store in Redis instead of in-memory dict for multi-worker safety
+            from app.services.session_store import session_store
+            session_store.set_verifier(f"gdrive:{user_id}", flow.code_verifier, ttl=600)
         return auth_url
 
     def handle_callback(self, code: str, user_id: str, db: Session) -> dict:
         flow = _build_flow()
-        code_verifier = self._pending_verifiers.pop(user_id, None)
+        from app.services.session_store import session_store
+        code_verifier = session_store.get_verifier(f"gdrive:{user_id}")
         flow.fetch_token(code=code, code_verifier=code_verifier)
         creds = flow.credentials
 
